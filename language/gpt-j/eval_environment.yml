@@ -1,4 +1,4 @@
-name: mlperf-gptj
+name: mlperf-gpt-j
 channels:
   - defaults
 dependencies:
