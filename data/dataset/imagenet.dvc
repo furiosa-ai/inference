@@ -1,0 +1,6 @@
+outs:
+- md5: 174f066a51a4fd41a522e58a63d869b6.dir
+  size: 6910258585
+  nfiles: 51008
+  hash: md5
+  path: imagenet

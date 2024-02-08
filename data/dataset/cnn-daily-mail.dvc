@@ -1,0 +1,6 @@
+outs:
+- md5: 2c9bc5dde09c3ecce32d974cff7d830f.dir
+  size: 63151006
+  nfiles: 2
+  hash: md5
+  path: cnn-daily-mail

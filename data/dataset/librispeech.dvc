@@ -1,0 +1,6 @@
+outs:
+- md5: 76c19eed11d07f489156c6c2b6bb3e5d.dir
+  size: 1424378943
+  nfiles: 6010
+  hash: md5
+  path: librispeech
