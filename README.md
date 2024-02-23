@@ -1,3 +1,76 @@
+# FuriosaAI Internal Evaluation(MLPerf v4.0)
+## Prerequisites
+* Set up AWS credentials, following instructions on "[기타 - DVC & AWS S3 설정](https://www.notion.so/furiosa/DVC-AWS-S3-89c2ee0ce6564dc1bb6ba134e6e86381)".
+* Install Conda: https://docs.anaconda.com/free/anaconda/install/index.html
+
+
+## Installation
+```
+git clone --branch v4.0-internal https://github.com/furiosa-ai/inference.git
+cd inference
+
+# (optional) if GCC Compiler is not installed on Ubuntu,
+apt-get update && apt-get install build-essential -y
+```
+
+## How to run end-to-end evaluation
+Ene-to-end(E2E) evaluation is the process of downloading models and dataset, building a Python environment, and performing model accuracy evaluation. E2E scripts are developed based on [mlperf v3.1](https://github.com/mlcommons/inference/tree/v3.1). 
+
+To run E2E evaluation:
+
+```
+make [model_name]
+```
+
+or equivalently,
+
+```
+bash scripts/build_[model_name]_env.sh
+bash scripts/eval_[model_name].sh
+```
+
+- `model_name` includes [llama2, stablediffusion, all]
+- For example, to run E2E LLaMA2-70b evaluation
+    ```
+    make llama2
+    ```
+
+    or
+
+    ```
+    # build conda environment and download dataset
+    bash scripts/build_llama2-70b_env.sh
+    
+    # run evaluation on pre-built conda environment
+    bash scripts/eval_llama2-70b.sh
+    ```
+
+### Configurability
+Some parameters are configurable, for example,
+- llama2-70b
+    
+    The command `make llama2` is equivalent to
+    ```
+    export SCENARIO=Offline # SCENARIO is one of [Offline, Server]
+    export N_COUNT=24576   # N_COUNT is a number between [1, 24576]
+    export DATA_TYPE=float32    # DATA_TYPE is one of [float32, float16, bfloat16]
+    export DEVICE=cuda:0    # DEVICE is one of [cpu, cuda:0]
+    make llama2
+    ```
+    Each environment variable above has the value as default, which can be changed to another.
+
+Likewise,
+
+- stable-diffusion-xl-base
+    ```
+    export SCENARIO=Offline # SCENARIO is one of [Offline, SingleStream, MultiStream, Server]
+    export N_COUNT=5000   # N_COUNT is a number between [1, 5000]
+    export DATA_TYPE=fp32    # DATA_TYPE is one of [fp32, fp16, bf16]
+    export DEVICE=cuda    # DEVICE is one of [cpu, cuda]
+    make stablediffusion
+    ```
+
+
 # MLPerf™ Inference Benchmark Suite
 MLPerf Inference is a benchmark suite for measuring how fast systems can run models in a variety of deployment scenarios. 
 
