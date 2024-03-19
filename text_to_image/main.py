@@ -391,7 +391,7 @@ def main():
     #
     # make one pass over the dataset to validate accuracy
     #
-    count = ds.get_item_count()
+    # count = ds.get_item_count()
 
     # warmup
     ds.load_query_samples([0])
@@ -473,7 +473,10 @@ def main():
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
         final_results["accuracy_results"] = result_dict
-        post_proc.save_images(saved_images_ids, ds)
+        try:
+            post_proc.save_images(saved_images_ids, ds)
+        except KeyError:
+            pass
 
     runner.finish()
     lg.DestroyQSL(qsl)
