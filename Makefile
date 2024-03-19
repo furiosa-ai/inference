@@ -11,3 +11,15 @@ llama2:
 stablediffusion:
 	-bash scripts/build_stablediffusion_env.sh
 	-bash scripts/eval_stablediffusion.sh
+
+# verified evaluation log
+.PHONY: log_all
+log_all: log_llama2 log_stablediffusion
+
+.PHONY: log_llama2
+log_llama2:
+	-dvc pull logs/internal/llama2-70b.dvc
+
+.PHONY: log_stablediffusion
+log_stablediffusion:
+	-dvc pull logs/internal/stablediffusion.dvc
