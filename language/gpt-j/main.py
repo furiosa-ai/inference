@@ -39,12 +39,13 @@ def get_args():
                         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--max_examples", type=int, default=None,
                         help="Maximum number of examples to consider (not limited by default)")
-    parser.add_argument("--model_script_path", type=Path, help="")
-    parser.add_argument("--use_mcp", action="store_true", default=False, help="use mcp to quantize the model")
-    parser.add_argument("--recalibrate", action="store_true", default=False, help="load already existing quantization metadata")
+    parser.add_argument("--quant_config_path", type=Path, help="a config for model quantization")
+    parser.add_argument("--quant_param_path", type=Path, help="quantization parameters for calibraed layers")
+    parser.add_argument("--quant_format_path", type=Path, help="quantization specifications for calibrated layers")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using ModelComPressor(MCP)")
+    parser.add_argument('--torch_optim', default='default', type=str, choices=['default', 'none'], help='Torch optimization')
     parser.add_argument("--num_splits", type=int, default=1, help="")
     parser.add_argument("--split_idx", type=int, default=0, help="")
-    parser.add_argument('--torch_optim',default='default',type=str,choices=['default', 'none'],help='Torch optimization.',)
     args = parser.parse_args()
     return args
 
@@ -71,14 +72,14 @@ def main():
         split_idx=args.split_idx
     )
 
-    if args.use_mcp:
-        import quantization 
-        from utils import set_optimization, random_seed
+    if args.quantize:
+        from quantization import quantize_model
+        from quantization.utils import set_optimization, random_seed
 
         random_seed()
         set_optimization(args)
 
-        sut.model = quantization.get_quant_model(sut.model, args.calib_dataset_path, args.model_script_path, args.recalibrate)
+        sut.model = quantize_model(sut.model, args.quant_config_path, args.quant_param_path, args.quant_format_path)
     
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
@@ -93,17 +94,18 @@ def main():
     log_path = os.environ.get("LOG_PATH")
     if not log_path:
         dataset_filename = args.dataset_path.stem
-        if args.model_script_path is not None:
-            if "fp32" in args.model_script_path.as_posix() or args.use_mcp == False:
+        quant_config_filename = args.quant_config_path.stem
+        if args.quant_config_path is not None:
+            if "fp32" in args.quant_config_path.as_posix() or args.quantize == False:
                 if args.num_splits > 1:
                     log_path = f"build/logs/fp32/{dataset_filename}_{args.num_splits}_{args.split_idx}"
                 else:
                     log_path = f"build/logs/fp32/{dataset_filename}"
             else:
                 if args.num_splits > 1:
-                    log_path = f"build/logs/{args.model_script_path.split('.')[1].split('/')[-1]}/{args.dataset_path.split('.')[1].split('/')[-1]}_{args.num_splits}_{args.split_idx}"
+                    log_path = f"build/logs/{quant_config_filename}/{dataset_filename}_{args.num_splits}_{args.split_idx}"
                 else:
-                    log_path = f"build/logs/{args.model_script_path.split('.')[1].split('/')[-1]}/{args.dataset_path.split('.')[1].split('/')[-1]}"
+                    log_path = f"build/logs/{quant_config_filename}/{dataset_filename}"
         else:
             log_path = f"build/logs/{dataset_filename}"
     if not os.path.exists(log_path):
