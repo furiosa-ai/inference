@@ -4,13 +4,11 @@ import argparse
 import os
 import sys
 from backend import get_SUT
-import quantization 
+sys.path.insert(0, os.getcwd())
 
 import time
 from datetime import timedelta
-from utils import set_optimization, random_seed
-
-sys.path.insert(0, os.getcwd())
+from pathlib import Path
 
 
 def get_args():
@@ -21,7 +19,7 @@ def get_args():
                         "Server"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
     parser.add_argument(
-        "--dataset-path", default="./data/cnn_eval.json", help="")
+        "--dataset-path", type=Path, default="./data/cnn_eval.json", help="")
     parser.add_argument(
         "--calib-dataset-path", default="./data/cnn_dailymail_calibration.json", help="")
     parser.add_argument("--accuracy", action="store_true",
@@ -41,7 +39,7 @@ def get_args():
                         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--max_examples", type=int, default=None,
                         help="Maximum number of examples to consider (not limited by default)")
-    parser.add_argument("--model_script_path", default="./quantization/model_script/Qlevel1_RGDA0-W8A16-PTQ.yaml", help="")
+    parser.add_argument("--model_script_path", type=Path, help="")
     parser.add_argument("--use_mcp", action="store_true", default=False, help="use mcp to quantize the model")
     parser.add_argument("--recalibrate", action="store_true", default=False, help="load already existing quantization metadata")
     parser.add_argument("--num_splits", type=int, default=1, help="")
@@ -62,9 +60,6 @@ scenario_map = {
 def main():
     args = get_args()
 
-    set_optimization(args)
-    random_seed()
-
     sut = get_SUT(
         model_path=args.model_path,
         scenario=args.scenario,
@@ -77,6 +72,12 @@ def main():
     )
 
     if args.use_mcp:
+        import quantization 
+        from utils import set_optimization, random_seed
+
+        random_seed()
+        set_optimization(args)
+
         sut.model = quantization.get_quant_model(sut.model, args.calib_dataset_path, args.model_script_path, args.recalibrate)
     
     settings = lg.TestSettings()
@@ -90,21 +91,21 @@ def main():
     else:
         settings.mode = lg.TestMode.PerformanceOnly
     log_path = os.environ.get("LOG_PATH")
-    if args.model_script_path != "":
-        if "fp32" in args.model_script_path or args.use_mcp == False:
-            if args.num_splits > 1:
-                log_path = f"build/logs/fp32/{args.dataset_path.split('.')[1].split('/')[-1]}_{args.num_splits}_{args.split_idx}"
-            else:
-                log_path = f"build/logs/fp32/{args.dataset_path.split('.')[1].split('/')[-1]}"
-        else:
-            if args.num_splits > 1:
-                log_path = f"build/logs/{args.model_script_path.split('.')[1].split('/')[-1]}/{args.dataset_path.split('.')[1].split('/')[-1]}_{args.num_splits}_{args.split_idx}"
-            else:
-                log_path = f"build/logs/{args.model_script_path.split('.')[1].split('/')[-1]}/{args.dataset_path.split('.')[1].split('/')[-1]}"
-    else:
-        log_path = f"build/logs/{args.dataset_path.split('.')[1].split('/')[-1]}"
     if not log_path:
-        log_path = "build/logs"
+        dataset_filename = args.dataset_path.stem
+        if args.model_script_path is not None:
+            if "fp32" in args.model_script_path.as_posix() or args.use_mcp == False:
+                if args.num_splits > 1:
+                    log_path = f"build/logs/fp32/{dataset_filename}_{args.num_splits}_{args.split_idx}"
+                else:
+                    log_path = f"build/logs/fp32/{dataset_filename}"
+            else:
+                if args.num_splits > 1:
+                    log_path = f"build/logs/{args.model_script_path.split('.')[1].split('/')[-1]}/{args.dataset_path.split('.')[1].split('/')[-1]}_{args.num_splits}_{args.split_idx}"
+                else:
+                    log_path = f"build/logs/{args.model_script_path.split('.')[1].split('/')[-1]}/{args.dataset_path.split('.')[1].split('/')[-1]}"
+        else:
+            log_path = f"build/logs/{dataset_filename}"
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     log_output_settings = lg.LogOutputSettings()
