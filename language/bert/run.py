@@ -56,7 +56,7 @@ def get_args():
     parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
     parser.add_argument("--quantize", action="store_true", help="quantize model using ModelComPressor(MCP)")
     parser.add_argument('--torch_optim',default='default', type=str, choices=['default', 'none'], help='Torch optimization',)
-
+    parser.add_argument("--gpu", action="store_true", help="use GPU instead of CPU for the inference")
     args = parser.parse_args()
     return args
 
@@ -106,6 +106,12 @@ def main():
 
         random_seed()
         set_optimization(args)
+
+        if not args.gpu:
+            raise ValueError(
+                "Inference on a device other than GPU is not suppurted yet."
+            )
+
         sut.model = quantize_model(sut.model, args.quant_config_path,
                                    args.quant_param_path, args.quant_format_path)
         

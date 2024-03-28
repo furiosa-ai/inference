@@ -20,26 +20,26 @@ conda activate $env_name
 
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
-SCENARIO=Offline
+SCENARIO=${SCENARIO:=Offline}
 MODEL_PATH=$data_dir/models/bert/model.pytorch
+MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=10833 # total_len = 10,833
+N_COUNT=${N_COUNT:=10833} # total_len = 10,833
 
 # quantization args
 CALIBRATE=${CALIBRATE:=false}
+N_CALIB=${N_CALIB:=100} # total_len = 100
+CALIB_DATA_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
 
-if [ "$CALIBRATE" = true ]
-    then pass
-else
-    mkdir -p $LOG_PATH/calibration_range
-    cp $QUANT_PARAM_PATH $LOG_PATH/calibration_range/quant_param.npy
-    cp $QUANT_FORMAT_PATH $LOG_PATH/calibration_range/quant_format.yaml
-fi
+printf "<<EVAL_CONFIG>>\n"
+printf "\tSCENARIO: $SCENARIO\n"
+printf "\tNUM_EVAL_DATA: $N_COUNT\n"
+printf "\tCALIBRATE: $CALIBRATE\n"
 
 export LOG_PATH=$LOG_PATH
 export ML_MODEL_FILE_WITH_PATH=$MODEL_PATH
@@ -71,6 +71,7 @@ fi
 SECONDS=0
 python run.py --scenario=$SCENARIO \
               --backend=pytorch \
+              --gpu \
               --quantize \
               --quant_config_path=$QUANT_CONFIG_PATH \
               --quant_param_path=$QUANT_PARAM_PATH \
@@ -89,7 +90,7 @@ python accuracy-squad.py --vocab_file=$VOCAB_PATH \
                          --max_examples=$N_COUNT \
                          &> $LOG_PATH/accuracy_result.log
 
-printf "Save eval log to $LOG_PATH"
+printf "Save evaluation log to $LOG_PATH"
 
 unset LOG_PATH
 unset ML_MODEL_FILE_WITH_PATH
