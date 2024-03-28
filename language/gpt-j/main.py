@@ -75,6 +75,11 @@ def main():
         random_seed()
         set_optimization(args)
 
+        if not args.gpu:
+            raise ValueError(
+                "Inference on a device other than GPU is not suppurted yet."
+            )
+        
         sut.model = quantize_model(sut.model, args.quant_config_path, args.quant_param_path, args.quant_format_path)
     
     settings = lg.TestSettings()
