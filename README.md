@@ -16,8 +16,49 @@ apt-get update && apt-get install build-essential -y
 DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2.0-0 -y
 ```
 
+
+## Submission Model
+### Wi8Ai8KVi8 quantized BERT(qBERT)
+
+- Evaluation result
+
+    |    |        our result        | reference accuracy |
+    |:--:|:------------------------:|:---------------:|
+    | F1 | 91.05864237161231 (100.20%) | [90.874](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1119C31-L1119C37)
+
+- To reprocude the result, you can run one of the following commands:
+
+    1. 
+        ```
+        make qbert
+        ```
+
+    2. 
+        ```
+        . scripts/build_qbert_env.sh
+        . scripts/eval_qbert.sh
+        ```
+
+    3. 
+        ```
+        export SCENARIO=Offline # SCENARIO is one of [Offline, SingleStream, MultiStream, Server]
+        export N_COUNT=10833   # N_COUNT is a number between [1, 10833]
+        export CALIBRATE=false # CALIBRATE is one of [false, true]
+        export N_CALIB=100 # N_CALIB is a number between [1, 100]
+        make qbert
+        ```
+
+### Wi8Ai8KVi8 quantized GPT-J(qGPT-J)
+
+TBA
+
+### Wi8Ai8KVi8 quantized LLaMA2-70b(qLLaMA2-70b)
+
+TBA
+
+
 ## How to run end-to-end evaluation
-Ene-to-end(E2E) evaluation is the process of downloading models and dataset, building a Python environment, and performing model accuracy evaluation. E2E scripts are developed based on [f9a643c](https://github.com/mlcommons/inference/commit/f9a643c0a0e920588da1b51a1d822e1071a9dbec). 
+End-to-end(E2E) evaluation is the process of downloading models and dataset, building a Python environment, and performing model accuracy evaluation. E2E scripts are developed based on [f9a643c](https://github.com/mlcommons/inference/commit/f9a643c0a0e920588da1b51a1d822e1071a9dbec). 
 
 To run E2E evaluation:
 
