@@ -24,8 +24,7 @@ sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.join(os.getcwd(), "..", "..", "lon"))
 from absl import app
 from absl import flags
-from quantization import get_quant_model
-from utils import set_optimization, random_seed
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -71,9 +70,6 @@ scenario_map = {
 
 def main():
     args = get_args()
-    
-    set_optimization(args)
-    random_seed()
 
     sut = None
 
@@ -105,6 +101,11 @@ def main():
             raise ValueError("Unknown backend: {:}".format(args.backend))
     
     if args.use_mcp:
+        from utils import set_optimization, random_seed
+        from quantization import get_quant_model
+
+        set_optimization(args)
+        random_seed()
         sut.model = get_quant_model(sut, args.model_script_path, args.n_calib, args.recalibrate)
         
     settings = lg.TestSettings()
