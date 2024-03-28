@@ -39,7 +39,7 @@ def get_args():
     parser.add_argument("--quant_param_path", help="quantization parameters for calibraed layers")
     parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
     parser.add_argument("--quantize", action="store_true", help="quantize model using ModelComPressor(MCP)")
-    parser.add_argument('--torch_optim', default='default', type=str, choices=['default', 'none'], help='Torch optimization')
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use Pytorch numerical optimizaiton for CUDA/cudnn")
     parser.add_argument("--num_splits", type=int, default=1, help="")
     parser.add_argument("--split_idx", type=int, default=0, help="")
     args = parser.parse_args()
@@ -73,7 +73,7 @@ def main():
         from quantization.utils import set_optimization, random_seed
 
         random_seed()
-        set_optimization(args)
+        set_optimization(args.torch_numeric_optim)
 
         if not args.gpu:
             raise ValueError(
