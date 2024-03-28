@@ -51,11 +51,11 @@ def get_args():
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
-    parser.add_argument("--model_script_path", default="./quantization/model_script/Qlevel4_RGDA0-W8A8KV8-PTQ.yaml", help="")
-    parser.add_argument("--use_mcp", action="store_true", help="use mcp to quantize the model")
-    parser.add_argument("--recalibrate", action="store_true", default=False, help="load already existing quantization metadata")
-    parser.add_argument("--n_calib", type=int,  default=-1)
-    parser.add_argument('--torch_optim',default='default',type=str,choices=['default', 'none'],help='Torch optimization.',)
+    parser.add_argument("--quant_config_path", help="a config for model quantization")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibraed layers")
+    parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using ModelComPressor(MCP)")
+    parser.add_argument('--torch_optim',default='default', type=str, choices=['default', 'none'], help='Torch optimization',)
 
     args = parser.parse_args()
     return args
@@ -100,13 +100,14 @@ def main():
         else:
             raise ValueError("Unknown backend: {:}".format(args.backend))
     
-    if args.use_mcp:
+    if args.quantize:
         from utils import set_optimization, random_seed
-        from quantization import get_quant_model
+        from quantization import quantize_model
 
-        set_optimization(args)
         random_seed()
-        sut.model = get_quant_model(sut, args.model_script_path, args.n_calib, args.recalibrate)
+        set_optimization(args)
+        sut.model = quantize_model(sut.model, args.quant_config_path,
+                                   args.quant_param_path, args.quant_format_path)
         
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
