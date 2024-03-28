@@ -101,8 +101,8 @@ def main():
             raise ValueError("Unknown backend: {:}".format(args.backend))
     
     if args.quantize:
-        from utils import set_optimization, random_seed
         from quantization import quantize_model
+        from quantization.utils import set_optimization, random_seed
 
         random_seed()
         set_optimization(args)
