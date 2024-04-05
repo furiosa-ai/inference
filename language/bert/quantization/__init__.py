@@ -2,9 +2,10 @@ import os
 
 import torch
 import yaml
-from quantization.custom_symbolic_trace import custom_symbolic_trace
 
 import model_compressor  # isort:skip
+
+from quantization.custom_symbolic_trace import custom_symbolic_trace   # isort:skip
 
 
 def quantize_model(model, qconfig_path, qparam_path, qformat_path):
