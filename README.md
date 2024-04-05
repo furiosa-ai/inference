@@ -29,25 +29,26 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 - To reproduce the result, you can run one of the following commands:
 
-    1. 
+    - 
         ```
         make qbert
         ```
 
-    2. 
+    - 
         ```
         . scripts/build_qbert_env.sh
         . scripts/eval_qbert.sh
         ```
+        
+- Some parameters are configurable like below.
 
-    3. 
-        ```
+    ```
         export SCENARIO=Offline # SCENARIO is one of [Offline, SingleStream, MultiStream, Server]
         export N_COUNT=10833   # N_COUNT is a number between [1, 10833]
         export CALIBRATE=false # CALIBRATE is one of [false, true]
         export N_CALIB=100 # N_CALIB is a number between [1, 100]
         make qbert
-        ```
+    ```
 
 ### Wi8Ai8KVi8 quantized GPT-J (qGPT-J)
 
