@@ -1,3 +1,4 @@
+import inspect
 import random
 
 import numpy as np
@@ -24,3 +25,22 @@ def set_optimization(use_optim):
         torch.backends.cudnn.benchmark = False
         if hasattr(torch.backends, "opt_einsum"):
             torch.backends.opt_einsum.enabled = False
+
+
+def get_kwargs(fn, config_dict):
+    from typing import Optional
+
+    if not isinstance(config_dict, dict):
+        raise ValueError(f"{config_dict} is not a dictionary.")
+    params = inspect.signature(fn).parameters
+    kwargs = dict()
+    for p in params.values():
+        if p.name not in config_dict:
+            continue
+        if not (
+            p.annotation == type(config_dict[p.name])
+            or p.annotation == type(config_dict[p.name]) | None
+        ):
+            continue
+        kwargs[p.name] = config_dict[p.name]
+    return kwargs

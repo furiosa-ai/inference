@@ -14,27 +14,14 @@ from transformers import BertConfig, BertForQuestionAnswering
 import model_compressor  # isort:skip
 
 from quantization.custom_symbolic_trace import custom_symbolic_trace  # isort:skip
-from quantization.utils import random_seed, set_optimization  # isort:skip
+from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
 
 def load_pytorch_model(model_path, model_config_path, use_gpu):
     with open(model_config_path) as f:
         config_json = json.load(f)
 
-    config = BertConfig(
-        attention_probs_dropout_prob=config_json["attention_probs_dropout_prob"],
-        hidden_act=config_json["hidden_act"],
-        hidden_dropout_prob=config_json["hidden_dropout_prob"],
-        hidden_size=config_json["hidden_size"],
-        initializer_range=config_json["initializer_range"],
-        intermediate_size=config_json["intermediate_size"],
-        max_position_embeddings=config_json["max_position_embeddings"],
-        num_attention_heads=config_json["num_attention_heads"],
-        num_hidden_layers=config_json["num_hidden_layers"],
-        type_vocab_size=config_json["type_vocab_size"],
-        vocab_size=config_json["vocab_size"],
-    )
-
+    config = BertConfig(**config_json)
     device = torch.device("cuda:0") if use_gpu else torch.device("cpu")
 
     model = BertForQuestionAnswering(config)
@@ -47,17 +34,16 @@ def cal_data_loader(data_path, batch_size, n_calib):
     with open(data_path, "rb") as f:
         cal_features = pickle.load(f)
 
-    data_list = []
-    for feature in cal_features:
-        data_list.append(
-            {
-                "input_ids": torch.LongTensor(feature.input_ids),
-                "attention_mask": torch.LongTensor(feature.input_mask),
-                "token_type_ids": torch.LongTensor(feature.segment_ids),
-            }
-        )
+    data_list = [
+        {
+            "input_ids": torch.LongTensor(feature.input_ids),
+            "attention_mask": torch.LongTensor(feature.input_mask),
+            "token_type_ids": torch.LongTensor(feature.segment_ids),
+        }
+        for feature in cal_features[:n_calib]
+    ]
 
-    return DataLoader(data_list[:n_calib], batch_size=batch_size)
+    return DataLoader(data_list, batch_size=batch_size)
 
 
 def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
@@ -66,51 +52,22 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
 
     model = model_compressor.create_quantsim_model(
         model,
-        qformat_path=None,
-        qparam_path=None,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
-        kv_dtype=qconfig["kv_dtype"] if "kv_dtype" in qconfig else "bf16",
-        qlevel=qconfig["qlevel"],
-        target_machine=qconfig["target_machine"],
         dataloader=calib_dataloader,
         disable_inout=(True, True),
+        **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 
     model_compressor.calibrate(
         model,
         calib_dataloader=calib_dataloader,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
-        kv_dtype=qconfig["kv_dtype"] if "kv_dtype" in qconfig else "bf16",
-        percentile=qconfig["percentile"],
-        target_machine=qconfig["target_machine"],
+        **get_kwargs(model_compressor.calibrate, qconfig),
     )
 
     model_compressor.save(
         model,
         qformat_out_path=qformat_path,
         qparam_out_path=qparam_path,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
+        **get_kwargs(model_compressor.save, qconfig),
     )
 
     return
