@@ -1,7 +1,6 @@
 # end-to-end quantized model evaluation
 .PHONY: qbert
 qbert:
-	-bash scripts/build_qbert_env.sh
 	-bash scripts/eval_qbert.sh
 
 # end-to-end evaluation

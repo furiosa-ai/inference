@@ -27,28 +27,18 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
     |:--:|:---------------------------:|:---------------:|
     | F1 | 91.05864237161231 (100.20%) | [90.874](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1119C31-L1119C37)
 
-- To reproduce the result, you can run one of the following commands:
+To reproduce the above accuracy result, please run as follow:
 
-    - 
-        ```
-        make qbert
-        ```
+```
+. scripts/build_qbert_env.sh  # You can skip this step if you already setup the environment.
+make qbert
+```
 
-    - 
-        ```
-        . scripts/build_qbert_env.sh
-        . scripts/eval_qbert.sh
-        ```
-        
-- Some parameters are configurable like below.
-
-    ```
-        export SCENARIO=Offline # SCENARIO is one of [Offline, SingleStream, MultiStream, Server]
-        export N_COUNT=10833   # N_COUNT is a number between [1, 10833]
-        export CALIBRATE=false # CALIBRATE is one of [false, true]
-        export N_CALIB=100 # N_CALIB is a number between [1, 100]
-        make qbert
-    ```
+For other evaluations with different settigs, you can also change the following environment variables. Each configuration is defined as follows:
+* `SCENARIO` is a MLPerf scenario to evaluate the accuracy. It can be one of Offline, SingleStream, MultiStream, or Server. (default: Offline)
+* `N_COUNT`: the number of data to evaluate the accuracy. ([1, 10833])
+* `CALIBRATE`: the calibration is involved in the evaluation step if true. (default: false)
+* `N_CALIB`: the number of data to calibrate the quantized model. ([1, 100])
 
 ### Wi8Ai8KVi8 quantized GPT-J (qGPT-J)
 
