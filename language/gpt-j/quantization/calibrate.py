@@ -55,18 +55,17 @@ def load_pytorch_model(model_path, use_gpu):
 
 def cal_data_loader(calib_dataset_path, batch_size, n_calib):
     data_object = Dataset(calib_dataset_path, batch_size)
-    data_list = []
-    for idx in range(len(data_object.source_encoded_input_ids)):
-        data_list.append(
-            {
+    data_list = [
+        {
                 "input_ids": data_object.source_encoded_input_ids[idx],
                 "attention_mask": data_object.source_encoded_attn_masks[idx],
                 "position_ids": torch.arange(
                     len(data_object.source_encoded_input_ids[idx][0])
                 ),
             }
-        )
-    return DataLoader(data_list[:n_calib], batch_size)
+        for idx in range(len(data_object.source_encoded_input_ids))[:n_calib]
+    ]
+    return DataLoader(data_list, batch_size)
 
 
 def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
@@ -76,8 +75,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
             qconfig, model, calib_dataloader
         )
 
-    model_type = type(model)
-    model, input_names, concrete_args = custom_symbolic_trace(model)
+    model, _, _ = custom_symbolic_trace(model)
 
     model = model_compressor.create_quantsim_model(
         model,
