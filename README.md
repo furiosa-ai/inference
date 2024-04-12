@@ -18,22 +18,23 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 
 ## Submission Model
-### Wi8Ai8KVi8 quantized BERT(qBERT)
+
+### Wi8Ai8KVi8 quantized BERT (qBERT)
 
 TBA
 
-### Wi8Ai8KVi8 quantized GPT-J(qGPT-J)
+### Wi8Ai8KVi8 quantized GPT-J (qGPT-J)
 
 - Evaluation result
 
-    |         | our result | reference accuracy |
-    |:-------:|:----------------------:|:---------------:|
+    |         |   our result              | accuracy target |
+    |:-------:|:-------------------------:|:---------------:|
     | ROUGE1  | 43.0470 (100.14%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45)         |
     | ROUGE2  | 20.1573 (100.17%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72)         |
     | ROUGEL  | 30.0462 (100.19%)               | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99)         |
     | GEN_LEN | 3971863 (98.88%)               | [4016878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127)         |
 
-- To reprocude the result, you can run one of the following commands:
+- To reproduce the result, you can run one of the following commands:
 
     1. 
         ```
@@ -52,15 +53,16 @@ TBA
         export N_COUNT=10833   # N_COUNT is a number between [1, 13368]
         export CALIBRATE=false # CALIBRATE is one of [false, true]
         export N_CALIB=100 # N_CALIB is a number between [1, 1000]
-        make qbert
+        make qgpt-j
         ```
 
-### Wi8Ai8KVi8 quantized LLaMA2-70b(qLLaMA2-70b)
+### Wi8Ai8KVi8 quantized LLaMA2-70b (qLLaMA2-70b)
 
 TBA
 
 
 ## How to run end-to-end evaluation
+
 Ene-to-end(E2E) evaluation is the process of downloading models and dataset, building a Python environment, and performing model accuracy evaluation. E2E scripts are developed based on [f9a643c](https://github.com/mlcommons/inference/commit/f9a643c0a0e920588da1b51a1d822e1071a9dbec). 
 
 To run E2E evaluation:
