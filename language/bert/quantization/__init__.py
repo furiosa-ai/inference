@@ -1,6 +1,3 @@
-import os
-
-import torch
 import yaml
 
 import model_compressor  # isort:skip

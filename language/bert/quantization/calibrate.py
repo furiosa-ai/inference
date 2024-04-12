@@ -102,7 +102,6 @@ def get_args():
 
 def main():
     args = get_args()
-    sut = None
 
     if args.backend == "pytorch":
         if not args.gpu:
