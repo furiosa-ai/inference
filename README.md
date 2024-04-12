@@ -34,27 +34,18 @@ TBA
     | ROUGEL  | 30.0462 (100.19%)               | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99)         |
     | GEN_LEN | 3971863 (98.88%)               | [4016878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127)         |
 
-- To reproduce the result, you can run one of the following commands:
+To reproduce the above accuracy result, please run as follows:
 
-    1. 
-        ```
-        make qgpt-j
-        ```
+```
+. scripts/build_qgpt-j_env.sh # You can skip this step if you have already set up the environment. 
+make qgpt-j
+```
 
-    2. 
-        ```
-        . scripts/build_qgpt-j_env.sh
-        . scripts/eval_qgpt-j.sh
-        ```
-
-    3. 
-        ```
-        export SCENARIO=Offline # SCENARIO is one of [Offline, SingleStream, Server]
-        export N_COUNT=10833   # N_COUNT is a number between [1, 13368]
-        export CALIBRATE=false # CALIBRATE is one of [false, true]
-        export N_CALIB=100 # N_CALIB is a number between [1, 1000]
-        make qgpt-j
-        ```
+For other evaluations with different settings, you can also change the following environment variables. Each configuration is defined as follows:
+`SCENARIO` is an MLPerf scenario to evaluate accuracy. It can be one of Offline, SingleStream, or Server.
+* `N_COUNT`: the number of data to evaluate the accuracy. ([1, 13368])
+* `CALIBRATE`: the calibration is involved in the evaluation step if true. (default: false)
+* `N_CALIB`: the number of data to calibrate the quantized model. ([1, 1000])
 
 ### Wi8Ai8KVi8 quantized LLaMA2-70b (qLLaMA2-70b)
 
