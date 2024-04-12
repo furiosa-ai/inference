@@ -1,5 +1,6 @@
 import inspect
 import random
+from typing import Any, Mapping
 
 import numpy as np
 import torch
@@ -27,20 +28,10 @@ def set_optimization(use_optim):
             torch.backends.opt_einsum.enabled = False
 
 
-def get_kwargs(fn, config_dict):
-    from typing import Optional
-
-    if not isinstance(config_dict, dict):
-        raise ValueError(f"{config_dict} is not a dictionary.")
+def get_kwargs(fn, config_dict: Mapping[str, Any]):
     params = inspect.signature(fn).parameters
-    kwargs = dict()
-    for p in params.values():
-        if p.name not in config_dict:
-            continue
-        if not (
-            p.annotation == type(config_dict[p.name])
-            or p.annotation == type(config_dict[p.name]) | None
-        ):
-            continue
-        kwargs[p.name] = config_dict[p.name]
-    return kwargs
+    return {
+        k: v
+        for k, v in config_dict.items()
+        if k in params and params[k].annotation in (inspect.Parameter.empty, type(v))
+    }
