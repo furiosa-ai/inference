@@ -24,8 +24,7 @@ sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.join(os.getcwd(), "..", "..", "lon"))
 from absl import app
 from absl import flags
-from quantization import get_quant_model
-from utils import set_optimization, random_seed
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -52,12 +51,12 @@ def get_args():
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
-    parser.add_argument("--model_script_path", default="./quantization/model_script/Qlevel4_RGDA0-W8A8KV8-PTQ.yaml", help="")
-    parser.add_argument("--use_mcp", action="store_true", help="use mcp to quantize the model")
-    parser.add_argument("--recalibrate", action="store_true", default=False, help="load already existing quantization metadata")
-    parser.add_argument("--n_calib", type=int,  default=-1)
-    parser.add_argument('--torch_optim',default='default',type=str,choices=['default', 'none'],help='Torch optimization.',)
-
+    parser.add_argument("--quant_config_path", help="a config for model quantization")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibraed layers")
+    parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using ModelComPressor(MCP)")
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use Pytorch numerical optimizaiton for CUDA/cudnn")
+    parser.add_argument("--gpu", action="store_true", help="use GPU instead of CPU for the inference")
     args = parser.parse_args()
     return args
 
@@ -71,9 +70,6 @@ scenario_map = {
 
 def main():
     args = get_args()
-    
-    set_optimization(args)
-    random_seed()
 
     sut = None
 
@@ -104,8 +100,20 @@ def main():
         else:
             raise ValueError("Unknown backend: {:}".format(args.backend))
     
-    if args.use_mcp:
-        sut.model = get_quant_model(sut, args.model_script_path, args.n_calib, args.recalibrate)
+    if args.quantize:
+        from quantization import quantize_model
+        from quantization.utils import set_optimization, random_seed
+
+        random_seed()
+        set_optimization(args.torch_numeric_optim)
+
+        if not args.gpu:
+            raise ValueError(
+                "Inference on a device other than GPU is not suppurted yet."
+            )
+
+        sut.model = quantize_model(sut.model, args.quant_config_path,
+                                   args.quant_param_path, args.quant_format_path)
         
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
