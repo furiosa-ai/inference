@@ -9,12 +9,9 @@ from transformers import AutoModelForCausalLM
 
 import model_compressor  # isort:skip
 
-sys.path.insert(0, os.getcwd())
-
 from dataset import Dataset  # isort:skip
-from quantization import QuantPreTrainedModel  # isort:skip
 from quantization.custom_symbolic_trace import custom_symbolic_trace  # isort:skip
-from quantization.utils import random_seed, set_optimization  # isort:skip
+from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
 
 def get_autoscale_calib_config(model_script, model, calib_dataloader):
@@ -79,66 +76,23 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
 
     model = model_compressor.create_quantsim_model(
         model,
-        qformat_path=None,
-        qparam_path=None,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
-        qlevel=qconfig["qlevel"],
-        target_machine=qconfig["target_machine"],
-        act_zp_equalizing=(
-            qconfig["act_zp_equalizing"]
-            if "act_zp_equalizing" in qconfig
-            else "disabled"
-        ),
         dataloader=calib_dataloader,
         disable_inout=(True, True),
-        kv_dtype=qconfig["kv_dtype"] if "kv_dtype" in qconfig else "bf16",
+        **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 
     model_compressor.calibrate(
-        model=model,
-        model_name=qconfig["model"],
+        model,
         calib_dataloader=calib_dataloader,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
-        percentile=qconfig["percentile"],
-        target_machine=qconfig["target_machine"],
-        act_zp_equalizing=(
-            qconfig["act_zp_equalizing"]
-            if "act_zp_equalizing" in qconfig
-            else "disabled"
-        ),
-        autoscale=qconfig["autoscale"] if run_autoscale else "disabled",
-        autoscale_calib_method=(
-            qconfig["autoscale_calib_method"] if run_autoscale else "auto"
-        ),
         autoscale_calib_kwargs=autoscale_calib_cfg if run_autoscale else None,
+        **get_kwargs(model_compressor.calibrate, qconfig),
     )
 
     model_compressor.save(
         model,
-        qparam_out_path=qparam_path,
         qformat_out_path=qformat_path,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
+        qparam_out_path=qparam_path,
+        **get_kwargs(model_compressor.save, qconfig),
     )
 
     return

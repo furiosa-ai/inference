@@ -47,7 +47,7 @@ if [ "$CALIBRATE" = true ]; then
     printf "\t\tNUM_CALIB_DATA: $N_CALIB\n"
     QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
     QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
-    python quantization/calibrate.py --backend=pytorch \
+    python -m quantization.calibrate --backend=pytorch \
                                      --model_path=$MODEL_PATH \
                                      --quant_config_path=$QUANT_CONFIG_PATH \
                                      --quant_param_path=$QUANT_PARAM_PATH \
@@ -63,7 +63,7 @@ fi
 
 
 SECONDS=0
-python main.py --scenario=$SCENARIO \
+python -m main --scenario=$SCENARIO \
                --model-path=$MODEL_PATH \
                --dataset-path=$DATASET_PATH \
                --gpu \

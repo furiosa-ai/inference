@@ -1,4 +1,6 @@
+import inspect
 import random
+from typing import Any, Mapping
 
 import numpy as np
 import torch
@@ -24,3 +26,13 @@ def set_optimization(use_optim):
         torch.backends.cudnn.benchmark = False
         if hasattr(torch.backends, "opt_einsum"):
             torch.backends.opt_einsum.enabled = False
+
+
+def get_kwargs(fn, config_dict: Mapping[str, Any]):
+    params = inspect.signature(fn).parameters
+    return {
+        k: v
+        for k, v in config_dict.items()
+        if k in params
+        and (params[k].annotation == type(v) or params[k].annotation == type(v) | None)
+    }
