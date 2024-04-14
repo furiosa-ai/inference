@@ -1,10 +1,6 @@
-import inspect
-import random
-from typing import Any, Mapping
-
-import numpy as np
 import torch
-
+import numpy as np
+import random 
 
 def random_seed(seed=42):
     torch.manual_seed(seed)
@@ -12,9 +8,10 @@ def random_seed(seed=42):
     np.random.seed(seed)
     random.seed(seed)
 
-
-def set_optimization(use_optim):
-    if not use_optim:
+def set_optimization(args):
+    if args.torch_optim == 'default':
+        return
+    elif args.torch_optim == 'none':
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
         torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False
@@ -24,14 +21,9 @@ def set_optimization(use_optim):
         torch.backends.cudnn.allow_tf32 = False
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        if hasattr(torch.backends, "opt_einsum"):
+        if hasattr(torch.backends, 'opt_einsum'):
             torch.backends.opt_einsum.enabled = False
+    else:
+        raise ValueError(f"Wrong argument value for '--torch_optim': {args.torch_optim}")
 
-
-def get_kwargs(fn, config_dict: Mapping[str, Any]):
-    params = inspect.signature(fn).parameters
-    return {
-        k: v
-        for k, v in config_dict.items()
-        if k in params and params[k].annotation in (inspect.Parameter.empty, type(v))
-    }
+    return
