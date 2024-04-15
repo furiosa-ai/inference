@@ -9,8 +9,8 @@ from transformers import BertConfig, BertForQuestionAnswering
 
 import model_compressor  # isort:skip
 
-from .custom_symbolic_trace import custom_symbolic_trace  # isort:skip
-from .utils import get_kwargs, random_seed, set_optimization  # isort:skip
+from quantization.custom_symbolic_trace import custom_symbolic_trace  # isort:skip
+from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
 
 def load_pytorch_model(model_path, model_config_path, use_gpu):
