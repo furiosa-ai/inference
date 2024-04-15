@@ -33,5 +33,6 @@ def get_kwargs(fn, config_dict: Mapping[str, Any]):
     return {
         k: v
         for k, v in config_dict.items()
-        if k in params and params[k].annotation in (inspect.Parameter.empty, type(v))
+        if k in params
+        and (params[k].annotation == type(v) or params[k].annotation == type(v) | None)
     }
