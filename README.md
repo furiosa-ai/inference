@@ -27,12 +27,12 @@ TBA
 
 - Evaluation result
 
-    |         |   our result              | accuracy target |
+    |         | our result                | accuracy target |
     |:-------:|:-------------------------:|:---------------:|
     | ROUGE1  | 43.0470 (100.14%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45)         |
     | ROUGE2  | 20.1573 (100.17%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72)         |
-    | ROUGEL  | 30.0462 (100.19%)               | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99)         |
-    | GEN_LEN | 3971863 (98.88%)               | [4016878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127)         |
+    | ROUGEL  | 30.0462 (100.19%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99)         |
+    | GEN_LEN | 3971863 (98.88%)          | [4016878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127)       |
 
 To reproduce the above accuracy result, please run as follows:
 
@@ -54,7 +54,7 @@ TBA
 
 ## How to run end-to-end evaluation
 
-Ene-to-end(E2E) evaluation is the process of downloading models and dataset, building a Python environment, and performing model accuracy evaluation. E2E scripts are developed based on [f9a643c](https://github.com/mlcommons/inference/commit/f9a643c0a0e920588da1b51a1d822e1071a9dbec). 
+End-to-end(E2E) evaluation is the process of downloading models and dataset, building a Python environment, and performing model accuracy evaluation. E2E scripts are developed based on [f9a643c](https://github.com/mlcommons/inference/commit/f9a643c0a0e920588da1b51a1d822e1071a9dbec). 
 
 To run E2E evaluation:
 
