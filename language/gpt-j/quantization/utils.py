@@ -1,6 +1,6 @@
 import inspect
 import random
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
 
 import numpy as np
 import torch
@@ -34,5 +34,5 @@ def get_kwargs(fn, config_dict: Mapping[str, Any]):
         k: v
         for k, v in config_dict.items()
         if k in params
-        and (params[k].annotation == type(v) or params[k].annotation == type(v) | None)
+        and any(params[k].annotation == x for x in [type(v), Optional[type(v)]])
     }
