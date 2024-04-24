@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 import torch
 import yaml
+from transformers.generation import GenerationConfig
 from transformers.generation.utils import inspect
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
@@ -24,7 +25,7 @@ def quantize_model(model, qconfig_path, qparam_path, qformat_path):
         qformat_path=qformat_path,
         qparam_path=qparam_path,
         disable_inout=(True, True),
-        **get_kwargs(model_compressor.create_quantsim_model, qconfig)
+        **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 
     return QuantPreTrainedModel(model, model_type, input_names, concrete_args)
@@ -32,22 +33,23 @@ def quantize_model(model, qconfig_path, qparam_path, qformat_path):
 
 class QuantPreTrainedModel(PreTrainedModel):
     def __init__(self, quant_model, model_type, input_names, concrete_args):
-        self.model_type = model_type
         super().__init__(quant_model.config)
         self.quant_model = quant_model
         self.config = quant_model.config
+        self.model_type = model_type
         self.input_names = input_names
         self.concrete_args = concrete_args
-
-    def can_generate(self):
-        return self.model_type.can_generate()
+        self.generation_config = (
+            GenerationConfig.from_model_config(quant_model.config)
+            if self.model_type.can_generate()
+            else None
+        )
 
     def _validate_model_kwargs(self, model_kwargs: Dict[str, Any]):
         """Validates model kwargs for generation. Generate argument typos will also be caught here."""
         # Excludes arguments that are handled before calling any model function
         if self.config.is_encoder_decoder:
-            for key in ["decoder_input_ids"]:
-                model_kwargs.pop(key, None)
+            model_kwargs.pop("decoder_input_ids", None)
 
         unused_model_args = []
         model_args = set(
@@ -89,7 +91,7 @@ class QuantPreTrainedModel(PreTrainedModel):
             if (
                 key in self.concrete_args
             ):  # check if the concrete args used when tracing and the elements of kwargs are equal
-                if not value == self.concrete_args[key]:
+                if value != self.concrete_args[key]:
                     raise ValueError(
                         f"The custom tracer set {key} as {self.concrete_args[key]} but kwargs sets {key} as {value}. Please check the argument again"
                     )
