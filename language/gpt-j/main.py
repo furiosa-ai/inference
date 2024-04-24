@@ -36,10 +36,10 @@ def get_args():
     parser.add_argument("--max_examples", type=int, default=None,
                         help="Maximum number of examples to consider (not limited by default)")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
-    parser.add_argument("--quant_param_path", help="quantization parameters for calibraed layers")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
     parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
-    parser.add_argument("--quantize", action="store_true", help="quantize model using ModelComPressor(MCP)")
-    parser.add_argument('--torch_numeric_optim', action="store_true", help="use Pytorch numerical optimizaiton for CUDA/cudnn")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
     parser.add_argument("--num_splits", type=int, default=1, help="")
     parser.add_argument("--split_idx", type=int, default=0, help="")
     args = parser.parse_args()
@@ -77,7 +77,7 @@ def main():
 
         if not args.gpu:
             raise ValueError(
-                "Inference on a device other than GPU is not suppurted yet."
+                "Inference on a device other than GPU is not supported yet."
             )
         
         sut.model = quantize_model(sut.model, args.quant_config_path, args.quant_param_path, args.quant_format_path)
