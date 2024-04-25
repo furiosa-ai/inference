@@ -1,3 +1,8 @@
+# end-to-end quantized model evaluation
+.PHONY: qgpt-j
+qgpt-j:
+	-bash scripts/eval_qgpt-j.sh
+
 # end-to-end evaluation
 .PHONY: all
 all: resnet retinanet 3d-unet bert rnnt gpt-j llama2 stablediffusion

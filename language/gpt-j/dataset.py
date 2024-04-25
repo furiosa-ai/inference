@@ -8,8 +8,9 @@ from torch.nn.functional import pad
 from torch.utils.data import DataLoader
 from typing import Optional, Dict, Sequence
 import io
-import utils
 import copy
+import json
+
 
 PROMPT_DICT = {
     "prompt_input": (
@@ -43,7 +44,7 @@ class Dataset():
             use_fast=False,)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.list_data_dict = utils.jload(self.dataset_path)
+        self.list_data_dict = jload(self.dataset_path)
         if num_splits > 1:
             n_splited_data = int(len(self.list_data_dict)/num_splits)
             start_idx = split_idx*n_splited_data
@@ -86,3 +87,17 @@ class Dataset():
 
     def __del__(self):
         print("Finished destroying QSL.")
+
+
+def _make_r_io_base(f, mode: str):
+    if not isinstance(f, io.IOBase):
+        f = open(f, mode=mode)
+    return f
+
+
+def jload(f, mode="r"):
+    """Load a .json file into a dictionary."""
+    f = _make_r_io_base(f, mode)
+    jdict = json.load(f)
+    f.close()
+    return jdict
