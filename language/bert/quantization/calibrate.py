@@ -78,7 +78,7 @@ def get_args():
     parser.add_argument("--model_config_path", help="path to bert model config")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument(
-        "--quant_param_path", help="quantization parameters for calibraed layers"
+        "--quant_param_path", help="quantization parameters for calibrated layers"
     )
     parser.add_argument(
         "--quant_format_path", help="quantization specifications for calibrated layers"
@@ -90,7 +90,7 @@ def get_args():
     parser.add_argument(
         "--torch_numeric_optim",
         action="store_true",
-        help="use Pytorch numerical optimizaiton for CUDA/cudnn",
+        help="use PyTorch numerical optimizaiton for CUDA/cuDNN",
     )
     parser.add_argument(
         "--gpu", action="store_true", help="use GPU instead of CPU for the inference"
@@ -106,7 +106,7 @@ def main():
     if args.backend == "pytorch":
         if not args.gpu:
             raise ValueError(
-                "Inference on a device other than GPU is not suppurted yet."
+                "Inference on a device other than GPU is not supported yet."
             )
         model = load_pytorch_model(args.model_path, args.model_config_path, args.gpu)
 

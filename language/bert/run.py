@@ -52,10 +52,10 @@ def get_args():
     parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
     parser.add_argument("--quant_config_path", help="a config for model quantization")
-    parser.add_argument("--quant_param_path", help="quantization parameters for calibraed layers")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
     parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
-    parser.add_argument("--quantize", action="store_true", help="quantize model using ModelComPressor(MCP)")
-    parser.add_argument('--torch_numeric_optim', action="store_true", help="use Pytorch numerical optimizaiton for CUDA/cudnn")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
     parser.add_argument("--gpu", action="store_true", help="use GPU instead of CPU for the inference")
     args = parser.parse_args()
     return args
@@ -109,7 +109,7 @@ def main():
 
         if not args.gpu:
             raise ValueError(
-                "Inference on a device other than GPU is not suppurted yet."
+                "Inference on a device other than GPU is not supported yet."
             )
 
         sut.model = quantize_model(sut.model, args.quant_config_path,
