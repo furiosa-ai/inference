@@ -51,7 +51,9 @@ class QuantizedGPTJForCausalLM(GPTJForCausalLM):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-        arguments = {k: v for k, v in locals().items() if k != "self"}
+        arguments = locals()
+
+        del arguments["self"]
 
         for arg in self.__concrete_args:
             if arguments[arg] != self.__concrete_args[arg]:
