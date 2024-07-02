@@ -29,6 +29,7 @@ N_COUNT=${N_COUNT:="13368"} # total_len=13,368
 # quantization args
 CALIBRATE=${CALIBRATE:=false}
 N_CALIB=${N_CALIB:=1000} # total_len=1,000
+CALIB_DATA_PATH=$data_dir/dataset/cnn-daily-mail/calibration/cnn_dailymail_calibration.json
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
@@ -42,8 +43,25 @@ export LOG_PATH
 
 mkdir -p $LOG_PATH/calibration_range
 
-cp $QUANT_PARAM_PATH $LOG_PATH/calibration_range/quant_param.npy
-cp $QUANT_FORMAT_PATH $LOG_PATH/calibration_range/quant_format.yaml
+if [ "$CALIBRATE" = true ]; then
+    printf "\t\tNUM_CALIB_DATA: $N_CALIB\n"
+    QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
+    QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
+    python quantization/calibrate.py --backend=pytorch \
+                                     --model_path=$MODEL_PATH \
+                                     --quant_config_path=$QUANT_CONFIG_PATH \
+                                     --quant_param_path=$QUANT_PARAM_PATH \
+                                     --quant_format_path=$QUANT_FORMAT_PATH \
+                                     --calib_data_path=$CALIB_DATA_PATH \
+                                     --n_calib=$N_CALIB \
+                                     --torch_optim none \
+                                     --gpu
+    printf "Save calibration range to $LOG_PATH/calibration_range"
+else
+    cp $QUANT_PARAM_PATH $LOG_PATH/calibration_range/quant_param.npy
+    cp $QUANT_FORMAT_PATH $LOG_PATH/calibration_range/quant_format.yaml
+fi
+
 
 SECONDS=0
 python main.py --scenario=$SCENARIO \
