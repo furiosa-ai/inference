@@ -8,8 +8,8 @@ from transformers.modeling_utils import PreTrainedModel
 
 import model_compressor  # isort:skip
 
-from quantization.custom_symbolic_trace import custom_symbolic_trace  # isort:skip
-from quantization.utils import get_kwargs  # isort:skip
+from .custom_symbolic_trace import custom_symbolic_trace  # isort:skip
+from .utils import get_kwargs  # isort:skip
 
 
 def quantize_model(model, qconfig_path, qparam_path, qformat_path):
