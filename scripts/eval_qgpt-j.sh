@@ -54,7 +54,6 @@ if [ "$CALIBRATE" = true ]; then
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
-                                     --torch_optim none \
                                      --gpu
     printf "Save calibration range to $LOG_PATH/calibration_range"
 else
@@ -72,7 +71,6 @@ python main.py --scenario=$SCENARIO \
                --quant_config_path=$QUANT_CONFIG_PATH \
                --quant_param_path=$QUANT_PARAM_PATH \
                --quant_format_path=$QUANT_FORMAT_PATH \
-               --torch_optim none \
                --max_examples=$N_COUNT \
                --accuracy
 duration=$SECONDS

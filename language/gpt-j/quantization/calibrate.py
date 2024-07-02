@@ -164,11 +164,9 @@ def get_args():
         "--n_calib", type=int, default=-1, help="number of dataset to calibrate"
     )
     parser.add_argument(
-        "--torch_optim",
-        default="default",
-        type=str,
-        choices=["default", "none"],
-        help="Torch optimization",
+        "--torch_numeric_optim",
+        action="store_true",
+        help="use Pytorch numerical optimizaiton for CUDA/cudnn",
     )
     parser.add_argument(
         "--gpu", action="store_true", help="use GPU instead of CPU for the inference"
@@ -192,7 +190,7 @@ def main():
         raise ValueError("Unsupported backend: {:}".format(args.backend))
 
     random_seed()
-    set_optimization(args)
+    set_optimization(args.torch_numeric_optim)
 
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
