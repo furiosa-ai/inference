@@ -1,5 +1,15 @@
+import json
+import os
+import io
 import torch
+import numpy as np
+import random 
 
+def random_seed(seed=42):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 def set_optimization(args):
     if args.torch_optim == 'default':
@@ -20,3 +30,15 @@ def set_optimization(args):
         raise ValueError(f"Wrong argument value for '--torch_optim': {args.torch_optim}")
 
     return
+
+def _make_r_io_base(f, mode: str):
+    if not isinstance(f, io.IOBase):
+        f = open(f, mode=mode)
+    return f
+
+def jload(f, mode="r"):
+    """Load a .json file into a dictionary."""
+    f = _make_r_io_base(f, mode)
+    jdict = json.load(f)
+    f.close()
+    return jdict
