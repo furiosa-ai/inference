@@ -13,7 +13,7 @@ from quantization.custom_symbolic_trace import custom_symbolic_trace  # isort:sk
 
 def quantize_model(model, qconfig_path, qparam_path, qformat_path):
     with open(qconfig_path, "r") as f:
-        model_script = yaml.safe_load(f)
+        qconfig = yaml.safe_load(f)
 
     model_type = type(model)
     model, input_names, concrete_args = custom_symbolic_trace(model)
@@ -22,24 +22,24 @@ def quantize_model(model, qconfig_path, qparam_path, qformat_path):
         model,
         qformat_path=qformat_path,
         qparam_path=qparam_path,
-        weight_calib_method=model_script["weight_calib_method"],
-        weight_granularity=model_script["weight_granularity"],
-        weight_dtype=model_script["weight_dtype"],
-        weight_nbits=model_script["weight_nbits"],
-        act_calib_method=model_script["act_calib_method"],
-        act_granularity=model_script["act_granularity"],
-        act_dtype=model_script["act_dtype"],
-        act_nbits=model_script["act_nbits"],
-        qlevel=model_script["qlevel"],
-        target_machine=model_script["target_machine"],
+        weight_calib_method=qconfig["weight_calib_method"],
+        weight_granularity=qconfig["weight_granularity"],
+        weight_dtype=qconfig["weight_dtype"],
+        weight_nbits=qconfig["weight_nbits"],
+        act_calib_method=qconfig["act_calib_method"],
+        act_granularity=qconfig["act_granularity"],
+        act_dtype=qconfig["act_dtype"],
+        act_nbits=qconfig["act_nbits"],
+        qlevel=qconfig["qlevel"],
+        target_machine=qconfig["target_machine"],
         act_zp_equalizing=(
-            model_script["act_zp_equalizing"]
-            if "act_zp_equalizing" in model_script
+            qconfig["act_zp_equalizing"]
+            if "act_zp_equalizing" in qconfig
             else "disabled"
         ),
         dataloader=None,
         disable_inout=(True, True),
-        kv_dtype=model_script["kv_dtype"] if "kv_dtype" in model_script else "bf16",
+        kv_dtype=qconfig["kv_dtype"] if "kv_dtype" in qconfig else "bf16",
     )
 
     return QuantPreTrainedModel(model, model_type, input_names, concrete_args)
