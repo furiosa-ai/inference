@@ -29,7 +29,7 @@ from absl import flags
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-            "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator", "ray"], default="tf", help="Backend")
+            "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator", "ray", "rngd"], default="tf", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                                                "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true",
@@ -71,9 +71,6 @@ scenario_map = {
 def main():
     args = get_args()
     
-    set_optimization(args)
-    random_seed()
-
     sut = None
 
     if not args.network or args.network == "sut":
@@ -100,6 +97,10 @@ def main():
             assert not args.profile, "Profiling is only supported by onnxruntime backend!"
             from ray_SUT import get_ray_sut
             sut = get_ray_sut(args)
+        elif args.backend == "rngd":
+            assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+            from RNGD_SUT import get_rngd_sut
+            sut = get_rngd_sut(args)
         else:
             raise ValueError("Unknown backend: {:}".format(args.backend))
     
