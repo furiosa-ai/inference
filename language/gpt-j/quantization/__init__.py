@@ -9,6 +9,7 @@ from transformers.modeling_utils import PreTrainedModel
 import model_compressor  # isort:skip
 
 from quantization.custom_symbolic_trace import custom_symbolic_trace  # isort:skip
+from quantization.utils import get_kwargs  # isort:skip
 
 
 def quantize_model(model, qconfig_path, qparam_path, qformat_path):
@@ -22,24 +23,8 @@ def quantize_model(model, qconfig_path, qparam_path, qformat_path):
         model,
         qformat_path=qformat_path,
         qparam_path=qparam_path,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
-        qlevel=qconfig["qlevel"],
-        target_machine=qconfig["target_machine"],
-        act_zp_equalizing=(
-            qconfig["act_zp_equalizing"]
-            if "act_zp_equalizing" in qconfig
-            else "disabled"
-        ),
-        dataloader=None,
         disable_inout=(True, True),
-        kv_dtype=qconfig["kv_dtype"] if "kv_dtype" in qconfig else "bf16",
+        **get_kwargs(model_compressor.create_quantsim_model, qconfig)
     )
 
     return QuantPreTrainedModel(model, model_type, input_names, concrete_args)
