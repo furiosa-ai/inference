@@ -1,9 +1,11 @@
+import io
 import json
 import os
-import io
-import torch
+import random
+
 import numpy as np
-import random 
+import torch
+
 
 def random_seed(seed=42):
     torch.manual_seed(seed)
@@ -11,10 +13,11 @@ def random_seed(seed=42):
     np.random.seed(seed)
     random.seed(seed)
 
+
 def set_optimization(args):
-    if args.torch_optim == 'default':
+    if args.torch_optim == "default":
         return
-    elif args.torch_optim == 'none':
+    elif args.torch_optim == "none":
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
         torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False
@@ -24,21 +27,11 @@ def set_optimization(args):
         torch.backends.cudnn.allow_tf32 = False
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        if hasattr(torch.backends, 'opt_einsum'):
+        if hasattr(torch.backends, "opt_einsum"):
             torch.backends.opt_einsum.enabled = False
     else:
-        raise ValueError(f"Wrong argument value for '--torch_optim': {args.torch_optim}")
+        raise ValueError(
+            f"Wrong argument value for '--torch_optim': {args.torch_optim}"
+        )
 
     return
-
-def _make_r_io_base(f, mode: str):
-    if not isinstance(f, io.IOBase):
-        f = open(f, mode=mode)
-    return f
-
-def jload(f, mode="r"):
-    """Load a .json file into a dictionary."""
-    f = _make_r_io_base(f, mode)
-    jdict = json.load(f)
-    f.close()
-    return jdict
