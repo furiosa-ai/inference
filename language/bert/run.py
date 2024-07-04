@@ -103,22 +103,7 @@ def main():
             sut = get_rngd_sut(args)
         else:
             raise ValueError("Unknown backend: {:}".format(args.backend))
-    
-    if args.quantize:
-        from quantization import quantize_model
-        from quantization.utils import set_optimization, random_seed
 
-        random_seed()
-        set_optimization(args.torch_numeric_optim)
-
-        if not args.gpu:
-            raise ValueError(
-                "Inference on a device other than GPU is not supported yet."
-            )
-
-        sut.model = quantize_model(sut.model, args.quant_config_path,
-                                   args.quant_param_path, args.quant_format_path)
-        
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
     settings.FromConfig(args.mlperf_conf, "bert", args.scenario)

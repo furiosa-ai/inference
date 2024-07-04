@@ -22,6 +22,7 @@ from furiosa_llm_models.bert.symbolic.mlperf_submission import \
 from pytorch_SUT import BERT_PyTorch_SUT
 from RNGD_encoder import BertMLPerfSubmissionEncoder, stack_tensors
 from squad_QSL import get_squad_QSL
+from torch.fx import GraphModule
 from transformers import BertConfig
 
 BUCKET_SIZE = 384
@@ -64,8 +65,30 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
         )
         self.model.load_state_dict(torch.load(model_file), strict=False)
 
+        if args.quantize:
+            from quantization import quantize_model
+            from quantization.utils import random_seed, set_optimization
+
+            random_seed()
+            set_optimization(args.torch_numeric_optim)
+
+            if not args.gpu:
+                raise ValueError(
+                    "Inference on a device other than GPU is not supported yet."
+                )
+            traced_model = self.model.trace()
+            self.model = quantize_model(
+                traced_model,
+                args.quant_config_path,
+                args.quant_param_path,
+                args.quant_format_path,
+            )
+
+        if not isinstance(self.model, GraphModule):
+            self.model = self.model.trace()
+
         self.encoder = BertMLPerfSubmissionEncoder(
-            self.model.trace(), bucket_size=BUCKET_SIZE, pad_token_id=PAD_TOKEN_ID
+            self.model, bucket_size=BUCKET_SIZE, pad_token_id=PAD_TOKEN_ID
         )
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
