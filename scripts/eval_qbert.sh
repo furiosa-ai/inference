@@ -21,13 +21,13 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:=Offline}
-BACKEND=${BACKEND:=rngd}
+BACKEND="rngd"
 MODEL_PATH=$data_dir/models/bert/model.pytorch
 MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=${N_COUNT:=10833} # total_len = 10,833
+N_COUNT=${N_COUNT:="10833"} # total_len = 10,833
 
 # quantization args
 CALIBRATE=${CALIBRATE:=false}

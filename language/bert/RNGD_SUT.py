@@ -17,8 +17,7 @@ import mlperf_loadgen as lg
 import numpy as np
 import torch
 import transformers
-from furiosa_llm_models.bert.symbolic.mlperf_submission import \
-    BertForQuestionAnswering
+from furiosa_llm_models.bert.symbolic.mlperf_submission import BertForQuestionAnswering
 from pytorch_SUT import BERT_PyTorch_SUT
 from RNGD_encoder import BertMLPerfSubmissionEncoder, stack_tensors
 from squad_QSL import get_squad_QSL
@@ -83,8 +82,7 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
                 args.quant_param_path,
                 args.quant_format_path,
             )
-
-        if not isinstance(self.model, GraphModule):
+        else:
             self.model = self.model.trace()
 
         self.encoder = BertMLPerfSubmissionEncoder(

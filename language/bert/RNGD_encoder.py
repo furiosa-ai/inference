@@ -5,33 +5,8 @@ from torch import Tensor
 from torch.fx import GraphModule
 from torch.nn.functional import pad
 from transformers import PreTrainedModel
-from transformers.modeling_outputs import QuestionAnsweringModelOutput
 
 MAX_PACKING_PER_ROW: int = 254
-
-
-class BertEncoder:
-    def __init__(
-        self, model: PreTrainedModel, bucket_size: Optional[int] = None
-    ) -> None:
-        self.model = model
-        self.bucket_size = bucket_size
-
-    def encode(
-        self,
-        input_ids: Tensor,
-        attention_mask: Tensor,
-        token_type_ids: Tensor,
-    ) -> Tuple[Tensor, Tensor]:
-        original_seq_len = input_ids.shape[-1]
-        outputs: QuestionAnsweringModelOutput = self.model(
-            input_ids=bucket_pad(input_ids, bucket_size=self.bucket_size),
-            token_type_ids=bucket_pad(token_type_ids, bucket_size=self.bucket_size),
-            attention_mask=bucket_pad(attention_mask, bucket_size=self.bucket_size),
-        )
-        start_logits = outputs.start_logits[:, :original_seq_len]
-        end_logits = outputs.end_logits[:, :original_seq_len]
-        return start_logits, end_logits
 
 
 class BertMLPerfSubmissionEncoder:
