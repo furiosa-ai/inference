@@ -9,7 +9,6 @@ from .utils import get_kwargs  # isort:skip
 
 def _quantize(
     model: GraphModule,
-    qconfig: Dict[str, Any],
     qparam_path: str,
     qformat_path: str,
     quantized_prefill: Optional[GraphModule] = None,
@@ -18,48 +17,42 @@ def _quantize(
         model,
         qformat_path=qformat_path,
         qparam_path=qparam_path,
-        disable_inout=(True, False),
         delete_org_weight=True,
         decode_phase=quantized_prefill is not None,
         quantized_prefill_model=quantized_prefill,
-        **get_kwargs(model_compressor.create_quantsim_model, qconfig),
+        target_machine='RGDA0',
+        qlevel=4,
     )
 
 
 def quantize_prefill_graph(
-    model: GraphModule, qconfig: Dict[str, Any], qparam_path: str, qformat_path: str
+    model: GraphModule, qparam_path: str, qformat_path: str
 ) -> GraphModule:
-    return _quantize(model, qconfig, qparam_path, qformat_path)
+    return _quantize(model, qparam_path, qformat_path)
 
 
 def quantize_decode_graph(
     model: GraphModule,
-    qconfig: Dict[str, Any],
     qparam_path: str,
     qformat_path: str,
     quantized_prefill: GraphModule,
 ) -> GraphModule:
-    return _quantize(model, qconfig, qparam_path, qformat_path, quantized_prefill)
+    return _quantize(model, qparam_path, qformat_path, quantized_prefill)
 
 
 def quantize_model(
     model: Dict[str, GraphModule],
-    qconfig_path: str,
     qparam_path: str,
     qformat_path: str,
 ) -> Dict[str, GraphModule]:
-    with open(qconfig_path, "r") as f:
-        qconfig = yaml.safe_load(f)
-
+    
     quantized_prefill = quantize_prefill_graph(
         model=model["prefill"],
-        qconfig=qconfig,
         qparam_path=qparam_path,
         qformat_path=qformat_path,
     )
     quantized_decode = quantize_decode_graph(
         model=model["decode"],
-        qconfig=qconfig,
         qparam_path=qparam_path,
         qformat_path=qformat_path,
         quantized_prefill=quantized_prefill,
