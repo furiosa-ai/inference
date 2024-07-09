@@ -1,3 +1,4 @@
+import argparse
 import array
 import os
 from typing import Dict, List, Tuple
@@ -39,11 +40,13 @@ RETURN_DICT_IN_GENERATE = False
 LOGITS_PROCESSOR = MinNewTokensLengthLogitsProcessor
 STOPPING_CRITERIA = MaxLengthCriteria
 KV_DTYPE = torch.float32
+QUANT_KV_DTYPE = torch.int8
 BUCKET_SIZE = 2048
 NUM_REAL_BATCH = 1
 
 
 # TODO: This code should be updated to the latest version of furiosa-llm-models
+# Maybe, v3.12.x
 class GPTJForCausalLM(upstream_GPTJForCausalLM):
     def get_input_names_and_concrete_args(
         self, model, prefill_phase=True
@@ -106,6 +109,8 @@ class GPTJForCausalLM(upstream_GPTJForCausalLM):
 
         return input_names, concrete_args
 
+# This is a hack to make the module name of the class to be the same as the original one
+GPTJForCausalLM.__module__ = "furiosa_llm_models.gptj.symbolic.mlperf_submission"
 
 class SUT_base(PyTorch_SUT_base):
     def __init__(
@@ -118,6 +123,7 @@ class SUT_base(PyTorch_SUT_base):
         use_gpu=False,
         network=None,
         qsl=None,
+        args: argparse.Namespace = None,
     ):
         self.network = network
         self.model_name = "EleutherAI/gpt-j-6B"
@@ -176,9 +182,28 @@ class SUT_base(PyTorch_SUT_base):
             self.model = self.model.to(memory_format=torch.channels_last)
         except:
             pass
+        
+        if args.quantize:
+            from quantization import quantize_model
+            from quantization.utils import random_seed, set_optimization
 
+            random_seed()
+            set_optimization(args.torch_numeric_optim)
+
+            if not args.gpu:
+                raise ValueError(
+                    "Inference on a device other than GPU is not supported yet."
+                )
+            traced_model = self.model.trace_all()
+            model= quantize_model(traced_model, qconfig_path=args.quant_config_path, qparam_path=args.quant_param_path, qformat_path=args.quant_format_path)
+            self.kv_dtype = QUANT_KV_DTYPE
+        else:
+            model = self.model.trace_all()
+            self.kv_dtype = KV_DTYPE
+
+            
         self.generator = MLPerfSubmissionBeamSearch(
-            **self.model.trace_all(), model_config=self.model.config
+            **model, model_config=self.model.config
         )
         # For nn.Module execution
         # self.generator = MLPerfSubmissionBeamSearch(
@@ -259,7 +284,7 @@ class SUT_base(PyTorch_SUT_base):
                 pad_token_id=PAD_TOKEN_ID,
                 eos_token_id=EOS_TOKEN_ID,
                 return_dict_in_generate=RETURN_DICT_IN_GENERATE,
-                kv_dtype=KV_DTYPE,
+                kv_dtype=self.kv_dtype,
                 bucket_size=BUCKET_SIZE,
             )
 
@@ -311,6 +336,7 @@ class SUT_Offline(SUT_base):
         use_gpu,
         network,
         qsl,
+        args,
     ):
         SUT_base.__init__(
             self,
@@ -322,6 +348,7 @@ class SUT_Offline(SUT_base):
             use_gpu,
             network,
             qsl,
+            args,
         )
 
     """IssueQuery and inference methods implemented in Base class"""
@@ -338,6 +365,7 @@ class SUT_Server(SUT_base):
         use_gpu,
         network,
         qsl,
+        args,
     ):
 
         SUT_base.__init__(
@@ -350,6 +378,7 @@ class SUT_Server(SUT_base):
             use_gpu,
             network,
             qsl,
+            args,
         )
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.total_samples_done = 0
@@ -388,6 +417,7 @@ class SUT_SingleStream(SUT_base):
         use_gpu,
         network,
         qsl,
+        args,
     ):
         SUT_base.__init__(
             self,
@@ -399,6 +429,7 @@ class SUT_SingleStream(SUT_base):
             use_gpu,
             network,
             qsl,
+            args,
         )
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.total_samples_done = 0
@@ -436,6 +467,7 @@ def get_SUT(
     use_gpu=False,
     network=None,
     qsl=None,
+    args: argparse.Namespace = None,
 ):
     if scenario == "Offline":
         return SUT_Offline(
@@ -447,6 +479,7 @@ def get_SUT(
             use_gpu,
             network,
             qsl,
+            args,
         )
     elif scenario == "Server":
         return SUT_Server(

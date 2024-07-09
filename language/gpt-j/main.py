@@ -117,12 +117,8 @@ def main():
         # Only the server loads the model.
         if args.backend == "pytorch":
             from backend_PyTorch import get_SUT
-        elif args.backend == "rngd":
-            from backend_RNGD import get_SUT
-        else:
-            raise ValueError(f"Unsupported backend: {args.backend}")
         
-        sut = get_SUT(
+            sut = get_SUT(
             model_path=args.model_path,
             scenario=args.scenario,
             dtype=args.dtype,
@@ -132,20 +128,22 @@ def main():
             max_examples=args.max_examples,
             qsl=qsl # If args.network is None, then only QSL get passed to the SUT, else it will be None
         )
+        elif args.backend == "rngd":
+            from backend_RNGD import get_SUT
 
-        if args.quantize:
-            from quantization import quantize_model
-            from quantization.utils import set_optimization, random_seed
-
-            random_seed()
-            set_optimization(args.torch_numeric_optim)
-
-            if not args.gpu:
-                raise ValueError(
-                    "Inference on a device other than GPU is not supported yet."
-                )
-            
-            sut.model = quantize_model(sut.model, args.quant_config_path, args.quant_param_path, args.quant_format_path)
+            sut = get_SUT(
+            model_path=args.model_path,
+            scenario=args.scenario,
+            dtype=args.dtype,
+            use_gpu=args.gpu,
+            network=args.network,
+            dataset_path=args.dataset_path,
+            max_examples=args.max_examples,
+            qsl=qsl, # If args.network is None, then only QSL get passed to the SUT, else it will be None,
+            args=args
+        )
+        else:
+            raise ValueError(f"Unsupported backend: {args.backend}")
     
     if args.network == "lon" and args.scenario == "SingleStream":
         print("ERROR: Single stream scenario in Loadgen Over the Network is not supported!")
