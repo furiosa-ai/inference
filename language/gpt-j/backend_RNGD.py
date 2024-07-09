@@ -1,20 +1,22 @@
 import array
 import os
+from typing import Dict, List, Tuple
 
 import mlperf_loadgen as lg
 import torch
 from accelerate import disk_offload
-from furiosa_llm_models.gptj.symbolic.mlperf_submission import GPTJForCausalLM
+from backend_PyTorch import SUT_base as PyTorch_SUT_base
+from furiosa_llm_models.gptj.symbolic.mlperf_submission import \
+    GPTJForCausalLM as upstream_GPTJForCausalLM
+from generator_RNGD import (MLPerfSubmissionBeamSearch,
+                            expand_inputs_for_generation)
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from transformers.generation.logits_process import \
     MinNewTokensLengthLogitsProcessor
 from transformers.generation.stopping_criteria import MaxLengthCriteria
 from transformers.generation.utils import BeamSearchScorer
-
-from backend_PyTorch import SUT_base as PyTorch_SUT_base
-from generator_RNGD import (MLPerfSubmissionBeamSearch,
-                            expand_inputs_for_generation)
+from transformers.utils.fx import get_concrete_args
 
 gen_kwargs = {
     "early_stopping": True,
@@ -38,6 +40,71 @@ LOGITS_PROCESSOR = MinNewTokensLengthLogitsProcessor
 STOPPING_CRITERIA = MaxLengthCriteria
 KV_DTYPE = torch.float32
 BUCKET_SIZE = 2048
+NUM_REAL_BATCH = 1
+
+
+# TODO: This code should be updated to the latest version of furiosa-llm-models
+class GPTJForCausalLM(upstream_GPTJForCausalLM):
+    def get_input_names_and_concrete_args(
+        self, model, prefill_phase=True
+    ) -> Tuple[List[str], Dict]:
+        if prefill_phase:
+            input_names = [
+                "input_ids",
+                "position_ids",
+                "past_key_values",
+                "causal_mask",
+                "new_key_location",
+                "new_value_location",
+            ]
+        else:
+            input_names = [
+                "input_ids",
+                "position_ids",
+                "past_key_values",
+                "attention_mask",
+                "new_key_location",
+                "new_value_location",
+                "past_valid_key_prompt_indices",
+                "past_valid_key_decode_indices",
+                "past_valid_value_prompt_indices",
+                "past_valid_value_decode_indices",
+            ]
+
+        concrete_args = get_concrete_args(model, input_names)
+
+        if prefill_phase:
+            custom_concrete_args = {
+                "use_cache": False,
+                "return_dict": True,
+                "output_attentions": False,
+                "output_hidden_states": False,
+                "bucket_size": BUCKET_SIZE,
+                "is_prefill": True,
+                "num_beam": NUM_BEAMS,
+                "max_new_tokens": MAX_NEW_TOKENS,
+                "num_real_batch": NUM_REAL_BATCH,
+            }
+        else:
+            custom_concrete_args = {
+                "use_cache": False,
+                "return_dict": True,
+                "output_attentions": False,
+                "output_hidden_states": False,
+                "bucket_size": BUCKET_SIZE,
+                "is_prefill": False,
+                "num_beam": NUM_BEAMS,
+                "max_new_tokens": MAX_NEW_TOKENS,
+                "num_real_batch": NUM_REAL_BATCH,
+            }
+
+        for arg in custom_concrete_args:
+            if arg in concrete_args:
+                concrete_args[arg] = custom_concrete_args[arg]
+                continue
+            raise ValueError(f"{arg} is not defined in {concrete_args}")
+
+        return input_names, concrete_args
 
 
 class SUT_base(PyTorch_SUT_base):
@@ -110,7 +177,13 @@ class SUT_base(PyTorch_SUT_base):
         except:
             pass
 
-        self.generator = MLPerfSubmissionBeamSearch(self.model)
+        self.generator = MLPerfSubmissionBeamSearch(
+            **self.model.trace_all(), model_config=self.model.config
+        )
+        # For nn.Module execution
+        # self.generator = MLPerfSubmissionBeamSearch(
+        #     self.model, model_config=self.model.config
+        # )
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_name,
@@ -168,11 +241,13 @@ class SUT_base(PyTorch_SUT_base):
                 max_length=MAX_LENGTH,
             )
             input_ids_tensor, input_masks_tensor_dict = expand_inputs_for_generation(
-                input_ids=input_ids_tensor, expand_size=NUM_BEAMS, attention_mask=input_masks_tensor
+                input_ids=input_ids_tensor,
+                expand_size=NUM_BEAMS,
+                attention_mask=input_masks_tensor,
             )
             input_masks_tensor = input_masks_tensor_dict["attention_mask"]
-            
-            output_batch = self.generator.decode(
+
+            output_batch = self.generator.generate(
                 input_ids=input_ids_tensor,
                 attention_mask=input_masks_tensor,
                 beam_scorer=beam_scorer,

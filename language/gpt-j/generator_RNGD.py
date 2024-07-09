@@ -3,6 +3,8 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
+from torch._dynamo.eval_frame import OptimizedModule
+from torch.fx import GraphModule
 from transformers import PretrainedConfig, PreTrainedModel
 from transformers.generation import BeamScorer
 from transformers.generation.logits_process import LogitsProcessorList
@@ -16,6 +18,7 @@ SUPPORTED_GENERATION_RETURN_DICT_TYPES = (
     CausalLMOutputWithPast,
     CausalLMOutputWithCrossAttentions,
 )
+MAX_NEW_TOKENS: int = 128
 MAX_PACKING_PER_ROW: int = 254
 MAX_BATCH_SIZE: int = 4
 BLOCK_SIZE: int = 1
@@ -24,12 +27,36 @@ logger = logging.getLogger(__name__)
 
 
 class MLPerfSubmissionBeamSearch:
-    def __init__(self, model: PreTrainedModel) -> None:
-        self.model = model
-        self.model_config = model.config
+    def __init__(
+        self,
+        model: Optional[PreTrainedModel] = None,
+        prefill: Optional[GraphModule] = None,
+        decode: Optional[GraphModule] = None,
+        model_config: Optional[PretrainedConfig] = None,
+    ) -> None:
+        if isinstance(model, PreTrainedModel):
+            self.model = model
+        # OptimizedModule cannot be checked by isinstance
+        # TypeError: Subscripted generics cannot be used with class and instance checks
+        if type(model) == OptimizedModule:
+            self.model = model
+        if (
+            isinstance(model, Dict)
+            and isinstance(model["prefill"], GraphModule)
+            and isinstance(model["decode"], GraphModule)
+        ):
+            self.model = self.prefill = model["prefill"]
+            self.decode = model["decode"]
+        if prefill is not None and decode is not None:
+            self.model = self.prefill = prefill
+            self.decode = decode
+
+        if self.model is None:
+            raise ValueError("model is not provided or valid.")
+        self.model_config = model_config
 
     @torch.no_grad()
-    def decode(
+    def generate(
         self,
         input_ids: torch.LongTensor,
         attention_mask: torch.Tensor,
@@ -65,7 +92,6 @@ class MLPerfSubmissionBeamSearch:
         starting_input_ids = input_ids
         starting_attention_mask = attention_mask
         batch_size, prompt_len = starting_input_ids.shape
-
         starting_position_ids = starting_attention_mask.long().cumsum(-1) - 1
         starting_position_ids.masked_fill_(starting_attention_mask == 0, 1)
 
@@ -130,7 +156,7 @@ class MLPerfSubmissionBeamSearch:
         next_input_ids = None
         count = 0
 
-        max_new_tokens = max_length - prompt_len
+        max_new_tokens = MAX_NEW_TOKENS
         max_prompt_len = bucket_size - max_new_tokens
 
         while True:
@@ -176,6 +202,9 @@ class MLPerfSubmissionBeamSearch:
                 }
 
                 is_first_decode = True
+                # If the model is a GraphModule, we need to switch the model to prefill.
+                if isinstance(self.model, GraphModule) and self.model != self.prefill:
+                    self.model = self.prefill
             else:
                 (next_input_ids, attention_mask, position_ids) = (
                     self.prepare_decode_inputs(
@@ -219,6 +248,17 @@ class MLPerfSubmissionBeamSearch:
 
                 is_first_decode = False
 
+                # If the model is a GraphModule, we need to switch the model to decode.
+                if isinstance(self.model, GraphModule) and self.model != self.decode:
+                    self.model = self.decode
+
+            # remove all concrete args from forward_kwargs for they will not be used in the
+            # forward pass.
+            if isinstance(self.model, GraphModule):
+                for arg in self.model.concrete_args:
+                    if arg in forward_kwargs:
+                        del forward_kwargs[arg]
+
             outputs = self.model(**forward_kwargs)
             logits = handle_outputs(outputs)
 
@@ -233,7 +273,6 @@ class MLPerfSubmissionBeamSearch:
                 # For decode, we will use the logits as scores as model outputs
                 # torch.nn.functional.log_softmax(lm_logits[:, -1], dim=-1)
                 next_token_scores = logits
-
             next_token_scores_processed = logits_processor(
                 generated_ids, next_token_scores
             )
@@ -272,7 +311,8 @@ class MLPerfSubmissionBeamSearch:
                 [generated_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1
             )
 
-            if not is_prefill:
+            # when finished(count == max_new_tokens), do not update the active block indices
+            if not is_prefill and count < max_new_tokens:
                 # now copy the new_key location back to original place for decode_phase
                 self.move_kv_cache_block_in_place(
                     seq_idx=max_prompt_len + count - 1,
@@ -297,7 +337,6 @@ class MLPerfSubmissionBeamSearch:
 
             cur_len = cur_len + 1
             count += 1
-
             if beam_scorer.is_done or stopping_criteria(generated_ids, scores):
                 break
 
