@@ -43,14 +43,16 @@ For evaluations with different settings, modify the following environment variab
 
 ### Wi8Ai8KVi8 Quantized GPT-J (qGPT-J)
 
-- Evaluation Result
+- Evaluation Result(v3.11)
 
     |         | Our Result                | Accuracy Target |
     |:-------:|:-------------------------:|:---------------:|
-    | ROUGE1  | 43.0470 (100.14%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45) |
-    | ROUGE2  | 20.1573 (100.17%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72) |
-    | ROUGEL  | 30.0462 (100.19%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
-    | GEN_LEN | 3,971,863 (98.88%)        | [4,016,878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127) |
+    | ROUGE1  | 43.0453 (100.14%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45) |
+    | ROUGE2  | 20.1418 (100.09%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72) |
+    | ROUGEL  | 30.0315 (100.14%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
+    | GEN_LEN | 3,976,403 (98.99%)        | [4,016,878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127) |
+    
+    - reference: [v3.11 Quantized GPT-J evaluation report](https://www.notion.so/furiosa/hugginface_rope_rngd_gelu-061729cc2bdc4410a9dd078fa05a317d)
 
 To reproduce the results, run the following commands:
 
