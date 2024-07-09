@@ -226,10 +226,12 @@ class SUT_base(PyTorch_SUT_base):
             logits_processor = LOGITS_PROCESSOR(
                 input_ids_tensor.shape[-1], MIN_NEW_TOKENS, EOS_TOKEN_ID
             )
-            stopping_criteria = STOPPING_CRITERIA(
-                MAX_LENGTH,
-                getattr(self.model, "max_position_embeddings", None),
-            )
+            # stopping_criteria = STOPPING_CRITERIA(
+            #     MAX_LENGTH,
+            #     getattr(self.model, "max_position_embeddings", None),
+            # )
+            # The stopping_criteria cannot be used for MLPerf BeamSearch, as the length of every input_ids is fixed to max_prompt_length
+            stopping_criteria = None
 
             beam_scorer = BeamSearchScorer(
                 batch_size=input_ids_tensor.shape[0],

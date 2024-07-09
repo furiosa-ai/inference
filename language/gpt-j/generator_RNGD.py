@@ -8,8 +8,7 @@ from torch.fx import GraphModule
 from transformers import PretrainedConfig, PreTrainedModel
 from transformers.generation import BeamScorer
 from transformers.generation.logits_process import LogitsProcessorList
-from transformers.generation.stopping_criteria import (
-    StoppingCriteriaList, validate_stopping_criteria)
+from transformers.generation.stopping_criteria import StoppingCriteriaList
 from transformers.generation.utils import BeamSearchDecoderOnlyOutput
 from transformers.modeling_outputs import (CausalLMOutputWithCrossAttentions,
                                            CausalLMOutputWithPast)
@@ -113,16 +112,6 @@ class MLPerfSubmissionBeamSearch:
 
         if isinstance(eos_token_id, int):
             eos_token_id = [eos_token_id]
-
-        if max_length is not None:
-            # logger.warning(
-            #     "`max_length` is deprecated in this function, use "
-            #     "`stopping_criteria=StoppingCriteriaList(MaxLengthCriteria(max_length=max_length))`\
-            #           instead."
-            # )
-            stopping_criteria = validate_stopping_criteria(
-                stopping_criteria, max_length
-            )
 
         # beam search config
         batch_size = len(beam_scorer._beam_hyps)
@@ -311,8 +300,7 @@ class MLPerfSubmissionBeamSearch:
                 [generated_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1
             )
 
-            # when finished(count == max_new_tokens), do not update the active block indices
-            if not is_prefill and count < max_new_tokens:
+            if not is_prefill:
                 # now copy the new_key location back to original place for decode_phase
                 self.move_kv_cache_block_in_place(
                     seq_idx=max_prompt_len + count - 1,
@@ -337,7 +325,8 @@ class MLPerfSubmissionBeamSearch:
 
             cur_len = cur_len + 1
             count += 1
-            if beam_scorer.is_done or stopping_criteria(generated_ids, scores):
+
+            if beam_scorer.is_done or count >= max_new_tokens:
                 break
 
             # v2.Generator specific variables
