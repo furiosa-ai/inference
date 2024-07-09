@@ -170,7 +170,7 @@ Note that all models are in Pytorch framework with float32 data type, and all ex
     | ROUGE2  | 20.1235 (100.00%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72)         |
     | ROUGEL  | 29.9881 (100.00%)               | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99)         |
     | GEN_LEN | 4016878 (100.00%)               | [4016878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127)         |
-    
+
 - bert
 
     |    |        our result        | reference accuracy |
