@@ -4,7 +4,7 @@ import argparse
 import os
 import math
 import sys
-from backend_PyTorch import get_SUT
+
 from GPTJ_QDL import GPTJ_QDL
 from GPTJ_QSL import get_GPTJ_QSL
 
@@ -12,7 +12,7 @@ from GPTJ_QSL import get_GPTJ_QSL
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["pytorch"], default="pytorch", help="Backend")
+        "--backend", choices=["pytorch", "rngd"], default="pytorch", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                         "Server"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
@@ -115,6 +115,13 @@ def main():
         # Gets SUT.
         # SUT only initialised when network is either None or is SUT as it is not needed in case of client(LON).
         # Only the server loads the model.
+        if args.backend == "pytorch":
+            from backend_PyTorch import get_SUT
+        elif args.backend == "rngd":
+            from backend_RNGD import get_SUT
+        else:
+            raise ValueError(f"Unsupported backend: {args.backend}")
+        
         sut = get_SUT(
             model_path=args.model_path,
             scenario=args.scenario,
