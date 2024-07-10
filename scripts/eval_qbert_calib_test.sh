@@ -21,7 +21,6 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:=Offline}
-BACKEND="rngd"
 MODEL_PATH=$data_dir/models/bert/model.pytorch
 MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
@@ -52,13 +51,14 @@ export SKIP_VERIFY_ACCURACY=true
 mkdir -p $LOG_PATH/calibration_range
 
 if [ "$CALIBRATE" = true ]; then
+    MODEL_TYPE="mlperf-submission" # could be erased at submission
+    printf "\t\tMODEL_TYPE: $MODEL_TYPE\n"
     printf "\t\tNUM_CALIB_DATA: $N_CALIB\n"
     QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
     QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
     # cd $work_dir/quantization
-    python -m quantization.calibrate --backend=$BACKEND \
+    python -m quantization.calibrate --model_type=$MODEL_TYPE \
                                      --model_path=$MODEL_PATH \
-                                     --model_source="mlperf_submission" \
                                      --model_config_path=$MODEL_CONFIG_PATH \
                                      --quant_config_path=$QUANT_CONFIG_PATH \
                                      --quant_param_path=$QUANT_PARAM_PATH \
@@ -96,16 +96,16 @@ fi
 
 # printf "Save evaluation log to $LOG_PATH"
 
-# unset LOG_PATH
-# unset ML_MODEL_FILE_WITH_PATH
-# unset VOCAB_FILE
-# unset DATASET_FILE
-# unset SKIP_VERIFY_ACCURACY
+unset LOG_PATH
+unset ML_MODEL_FILE_WITH_PATH
+unset VOCAB_FILE
+unset DATASET_FILE
+unset SKIP_VERIFY_ACCURACY
 
-# printf "\n============= End of eval =============\n"
+printf "\n============= End of calibration =============\n"
 
-# # exit from conda env.
-# conda deactivate
+# exit from conda env.
+conda deactivate
 
-# # get back to git root
+# get back to git root
 cd $git_dir

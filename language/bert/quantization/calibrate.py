@@ -9,18 +9,17 @@ from torch.utils.data import DataLoader
 from transformers import BertConfig, BertForQuestionAnswering
 
 import model_compressor  # isort:skip
-# from model_compressor.utils import calib_generator
-# from .calib_generator import calib_generator
-# from transformers import AutoTokenizer
 
 from .utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
 import os
 
+PADDING_SIZE = 384
 BUCKET_SIZE = 384
 PAD_TOKEN_ID = 0
 
 def load_pytorch_model(model_path, model_config_path, use_gpu):
+    from furiosa_llm_models.bert.symbolic.huggingface_rngd_gelu import BertForQuestionAnswering
     with open(model_config_path) as f:
         config_json = json.load(f)
 
@@ -29,47 +28,27 @@ def load_pytorch_model(model_path, model_config_path, use_gpu):
 
     model = BertForQuestionAnswering(config)
     model.to(device)
+    model.eval()
     model.load_state_dict(torch.load(model_path), strict=False)
     return model
 
 def load_mlperf_submission_model(model_path, model_config_path, use_gpu):
     from furiosa_llm_models.bert.symbolic.mlperf_submission import BertForQuestionAnswering
-    print("Loading BERT configs...")
-    with open("bert_config.json") as f:
+    with open(model_config_path) as f:
         config_json = json.load(f)
 
-    config = BertConfig(
-        attention_probs_dropout_prob=config_json["attention_probs_dropout_prob"],
-        hidden_act=config_json["hidden_act"],
-        hidden_dropout_prob=config_json["hidden_dropout_prob"],
-        hidden_size=config_json["hidden_size"],
-        initializer_range=config_json["initializer_range"],
-        intermediate_size=config_json["intermediate_size"],
-        max_position_embeddings=config_json["max_position_embeddings"],
-        num_attention_heads=config_json["num_attention_heads"],
-        num_hidden_layers=config_json["num_hidden_layers"],
-        type_vocab_size=config_json["type_vocab_size"],
-        vocab_size=config_json["vocab_size"],
-    )
+    config = BertConfig(**config_json)
+    device = torch.device("cuda:0") if use_gpu else torch.device("cpu")
 
-    dev = (
-        torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
-    )
-
-    print("Loading PyTorch model...")
     model = BertForQuestionAnswering(config)
-    model.to(dev)
+    model.to(device)
     model.eval()
-    model_file = os.environ.get(
-        "ML_MODEL_FILE_WITH_PATH",
-        "build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch",
-    )
-    model.load_state_dict(torch.load(model_file), strict=False)
+    model.load_state_dict(torch.load(model_path), strict=False)
 
     return model
 
 
-def cal_data_loader(data_path, batch_size, n_calib, model, generator):
+def cal_data_loader(data_path, batch_size, n_calib, model_type, is_equivalence_ci=False):
     with open(data_path, "rb") as f:
         cal_features = pickle.load(f)
 
@@ -82,54 +61,54 @@ def cal_data_loader(data_path, batch_size, n_calib, model, generator):
         for feature in cal_features[:n_calib]
     ]
 
-    from RNGD_encoder import greedy_attention_packing_bert, bucket_pad
-    from torch.nn.functional import pad
+    if model_type == "golden":
+        return DataLoader(data_list, batch_size=batch_size)
+    
+    elif model_type == "mlperf-submission":
+        if is_equivalence_ci:
+            for data in data_list:
+                data.update(
+                    {
+                        "attention_mask": data["attention_mask"]
+                        .unsqueeze(0)
+                        .repeat(384, 1),
+                        "position_ids": torch.arange(384),
+                    }
+                )
 
-    for data in data_list:
-        (
-            input_ids,
-            token_type_ids,
-            attention_mask,
-            position_ids,
-            packed_target_locations,
-        ) = greedy_attention_packing_bert(
-            input_ids=bucket_pad(data["input_ids"].unsqueeze(0), BUCKET_SIZE),
-            token_type_ids=bucket_pad(data["token_type_ids"].unsqueeze(0), BUCKET_SIZE),
-            bucketized_attention_mask=bucket_pad(data["attention_mask"].unsqueeze(0), BUCKET_SIZE),
-            pad_token_id=PAD_TOKEN_ID,
-            compact_mask=False, # TODO
-        )
+            return DataLoader(data_list, batch_size=batch_size)
+        
+        else:
+            from RNGD_encoder import greedy_attention_packing_bert, bucket_pad
 
-        data.update(
-            {
-                "input_ids": input_ids[0],
-                "token_type_ids": token_type_ids[0],
-                "attention_mask": attention_mask[0],
-                "position_ids": position_ids[0],
-            }
-        )
+            for data in data_list:
+                (
+                    input_ids,
+                    token_type_ids,
+                    attention_mask,
+                    position_ids,
+                    packed_target_locations,
+                ) = greedy_attention_packing_bert(
+                    input_ids=bucket_pad(data["input_ids"].unsqueeze(0), BUCKET_SIZE),
+                    token_type_ids=bucket_pad(data["token_type_ids"].unsqueeze(0), BUCKET_SIZE),
+                    bucketized_attention_mask=bucket_pad(data["attention_mask"].unsqueeze(0), BUCKET_SIZE),
+                    pad_token_id=PAD_TOKEN_ID,
+                    compact_mask=False, # TODO : do we use compact mask?
+                )
 
+                data.update(
+                    {
+                        "input_ids": input_ids[0],
+                        "token_type_ids": token_type_ids[0],
+                        "attention_mask": attention_mask[0],
+                        "position_ids": position_ids[0],
+                    }
+                )
 
-    # calib_dataloader = calib_generator(
-    #                 data_path,
-    #                 model,
-    #                 'bert-base-uncased',
-    #                 generator,
-    #                 AutoTokenizer,
-    #                 device=model.device,
-    # )
-    # return calib_dataloader
-    # calib_dataloader = calib_generator(
-    #     input_prompts,
-    #     model,
-    #     model_name,
-    #     BertUnsplitPackedGenerator,
-    #     AutoTokenizer,
-    #     device,
-    #     is_decode_only_model=False,
-    # )
-
-    return DataLoader(data_list, batch_size=batch_size)
+            return DataLoader(data_list, batch_size=batch_size)
+    
+    else:
+        ValueError("Unsupported backend: {:}".format(model_type))
 
 
 def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader):
@@ -170,10 +149,9 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["pytorch", "rngd"], default="pytorch", help="Backend"
+        "--model_type", choices=["golden", "mlperf-submission"], default="mlperf-submission", help="model_type"
     )
     parser.add_argument("--model_path", help="path to bert model")
-    parser.add_argument("--model_source", help="bert model source")
     parser.add_argument("--model_config_path", help="path to bert model config")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument(
@@ -194,6 +172,12 @@ def get_args():
     parser.add_argument(
         "--gpu", action="store_true", help="use GPU instead of CPU for the inference"
     )
+    parser.add_argument(
+        "--is_equivalence_ci",
+        action="store_true",
+        default=False,
+        help="flag for equivalence_ci",
+    )
 
     args = parser.parse_args()
     return args
@@ -202,32 +186,25 @@ def get_args():
 def main():
     args = get_args()
 
-    if args.backend == "pytorch":
+    if args.model_type == "golden":
         if not args.gpu:
             raise ValueError(
                 "Calibration on a device other than GPU is not supported yet."
             )
         model = load_pytorch_model(args.model_path, args.model_config_path, args.gpu)
+        model = model.trace()
 
-    elif args.backend == "rngd":
+    elif args.model_type == "mlperf-submission":
         if not args.gpu:
             raise ValueError(
                 "Calibration on a device other than GPU is not supported yet."
             )
-        # from RNGD_SUT import get_rngd_sut
-        # sut = get_rngd_sut(args)
-        # model = sut.model
+        
         model = load_mlperf_submission_model(args.model_path, args.model_config_path, args.gpu)
         model = model.trace()
 
-        if args.model_source == 'mlperf_submission':
-            from RNGD_encoder import BertMLPerfSubmissionEncoder
-            generator = BertMLPerfSubmissionEncoder
-        else:
-            not NotImplementedError
-
     else:
-        raise ValueError("Unsupported backend: {:}".format(args.backend))
+        raise ValueError("Unsupported backend: {:}".format(args.model_type))
 
     random_seed()
     set_optimization(args.torch_numeric_optim)
@@ -235,7 +212,7 @@ def main():
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
     dataloader = cal_data_loader(
-        args.calib_data_path, qconfig["calib_batch_size"], args.n_calib, model, generator
+        args.calib_data_path, qconfig["calib_batch_size"], args.n_calib, args.model_type, args.is_equivalence_ci
     )
     calibrate(
         model,
