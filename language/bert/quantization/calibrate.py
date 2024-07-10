@@ -12,8 +12,6 @@ import model_compressor  # isort:skip
 
 from .utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
-import os
-
 PADDING_SIZE = 384
 BUCKET_SIZE = 384
 PAD_TOKEN_ID = 0
