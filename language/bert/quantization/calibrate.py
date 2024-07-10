@@ -69,8 +69,8 @@ def cal_data_loader(data_path, batch_size, n_calib, model_type, is_equivalence_c
                     {
                         "attention_mask": data["attention_mask"]
                         .unsqueeze(0)
-                        .repeat(384, 1),
-                        "position_ids": torch.arange(384),
+                        .repeat(PADDING_SIZE, 1),
+                        "position_ids": torch.arange(PADDING_SIZE),
                     }
                 )
 
