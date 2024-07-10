@@ -7,6 +7,9 @@ import model_compressor  # isort:skip
 from .utils import get_kwargs  # isort:skip
 
 
+TARGET_MACHINE = 'RGDA0'
+QLEVEL = 4
+
 def _quantize(
     model: GraphModule,
     qparam_path: str,
@@ -20,8 +23,8 @@ def _quantize(
         delete_org_weight=True,
         decode_phase=quantized_prefill is not None,
         quantized_prefill_model=quantized_prefill,
-        target_machine='RGDA0',
-        qlevel=4,
+        target_machine=TARGET_MACHINE,
+        qlevel=QLEVEL,
     )
 
 
