@@ -6,6 +6,6 @@ dependencies:
   - pip:
       - torch==2.1.0
       - numpy==1.26.2
-      - transformers==4.35.2
+      - transformers==4.31.0
       - absl-py==2.1.0
       - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.11

@@ -25,6 +25,7 @@ BACKEND="rngd"
 MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+MLPERF_CONF=../../mlperf.conf
 N_COUNT=${N_COUNT:="13368"} # total_len=13,368
 
 # quantization args
@@ -65,7 +66,8 @@ fi
 
 SECONDS=0
 python -m main --scenario=$SCENARIO \
-                --backend=$BACKEND \
+               --backend=$BACKEND \
+               --mlperf_conf=$MLPERF_CONF \
                --model-path=$MODEL_PATH \
                --dataset-path=$DATASET_PATH \
                --gpu \
