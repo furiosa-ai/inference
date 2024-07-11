@@ -57,10 +57,8 @@ class Dataset():
         
         if NUM_SPLITS > 1:
             n_splited_data = int(len(self.list_data_dict)/NUM_SPLITS)
-            print(n_splited_data)
             start_idx = SPLIT_IDX*n_splited_data
             end_idx= (SPLIT_IDX+1)*n_splited_data if SPLIT_IDX!=NUM_SPLITS-1 else len(self.list_data_dict) + 1
-            print(start_idx, end_idx)
             self.list_data_dict = self.list_data_dict[start_idx:end_idx]
 
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
@@ -72,9 +70,7 @@ class Dataset():
         self.source_encoded_input_ids, self.source_encoded_attn_masks = self.encode_samples()
 
         self.count = total_count_override or len(self.sources)
-        print(total_count_override, len(self.sources))
         self.perf_count = perf_count_override or self.count
-        print(total_count_override, len(self.sources))
 
     def encode_samples(self):
         print("Encoding Samples")

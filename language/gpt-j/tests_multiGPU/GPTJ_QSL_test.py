@@ -1,5 +1,7 @@
 import mlperf_loadgen as lg
-from dataset import Dataset
+import os
+
+from tests_multiGPU.dataset_split_test import Dataset
 
 
 class GPTJ_QSL():
@@ -8,8 +10,7 @@ class GPTJ_QSL():
         self.max_examples = max_examples
 
         # creating data object for QSL
-        self.data_object = Dataset(
-                self.dataset_path, total_count_override=self.max_examples)
+        self.data_object = Dataset(self.dataset_path)
         
         # construct QSL from python binding
         self.qsl = lg.ConstructQSL(self.data_object.count, self.data_object.perf_count,
