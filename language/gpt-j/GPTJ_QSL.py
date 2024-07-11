@@ -1,7 +1,6 @@
 import mlperf_loadgen as lg
 from dataset import Dataset
 
-
 class GPTJ_QSL():
     def __init__(self, dataset_path: str, max_examples: int):
         self.dataset_path = dataset_path
