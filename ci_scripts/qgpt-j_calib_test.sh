@@ -62,11 +62,11 @@ else
     cp $QUANT_FORMAT_PATH $LOG_PATH/calibration_range/quant_format.yaml
 fi
 
-cd $git_dir
-RELEASED_PARAM_PATH=$git_dir/ci_test/qgpt-j/released_qparam/qparam.npy
+
+RELEASED_PARAM_PATH=$work_dir/ci_file/released_qparam/qparam.npy
 printf "\n============= STEP-2: Check the equivalence of quantiation parameters =============\n"
 
-python utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_PARAM_PATH \
+python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_PARAM_PATH \
                                     --created_quant_param_path=$QUANT_PARAM_PATH\
 
                                             
