@@ -41,8 +41,7 @@ else
     USER_CONF=user.conf;
 fi
 
-# CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
-CHECKPOINT_PATH=meta-llama/Llama-2-7b-chat-hf
+CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$DATA_TYPE/$(date +%Y%m%d_%H%M%S%Z)
 
