@@ -8,7 +8,7 @@ work_dir=$git_dir/$model_dir
 data_dir=$git_dir/data
 quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
-env_name=mlperf-$model_name-sunghyuck
+env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
 # work on model directory
