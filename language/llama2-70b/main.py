@@ -4,7 +4,6 @@ import argparse
 import os
 import logging
 import sys
-from SUT import SUT, SUTServer
 
 sys.path.insert(0, os.getcwd())
 
@@ -14,6 +13,7 @@ log = logging.getLogger("Llama-70B-MAIN")
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", type=str, choices=["Offline", "Server"], default="Offline", help="Scenario")
+    parser.add_argument("--backend", type=str, choices=["pytorch", "rngd"], help="Backend to use")
     parser.add_argument("--model-path", type=str, default="meta-llama/Llama-2-70b-chat-hf", help="Model name")
     parser.add_argument("--dataset-path", type=str, default=None, help="")
     parser.add_argument("--accuracy", action="store_true", help="Run accuracy mode")
@@ -37,10 +37,7 @@ scenario_map = {
     "server": lg.TestScenario.Server,
     }
 
-sut_map = {
-        "offline": SUT,
-        "server": SUTServer
-        }
+
 
 def main():
     args = get_args()
@@ -65,6 +62,18 @@ def main():
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = args.enable_log_trace
 
+    if args.backend == "pytorch":
+        from SUT import SUT, SUTServer
+    elif args.backend == "rngd":
+        from RNGD_SUT import SUT, SUTServer
+    else:
+        raise ValueError(f"Backend {args.backend} not supported.")
+    
+    sut_map = {
+    "offline": SUT,
+    "server": SUTServer
+    }
+    
     sut_cls = sut_map[args.scenario.lower()]
 
     sut = sut_cls(
