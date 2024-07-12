@@ -20,6 +20,7 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:="Offline"}
+BACKEND=${BACKEND:="rngd"}
 DATA_TYPE=${DATA_TYPE:="float32"}
 N_COUNT=${N_COUNT:="24576"} # total_len = 24,576
 DEVICE=${DEVICE:="cuda:0"}
@@ -40,12 +41,14 @@ else
     USER_CONF=user.conf;
 fi
 
-CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
+# CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
+CHECKPOINT_PATH=meta-llama/Llama-2-7b-chat-hf
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$DATA_TYPE/$(date +%Y%m%d_%H%M%S%Z)
 
 SECONDS=0
 python -u main.py --scenario Offline \
+                  --backend $BACKEND \
                   --model-path $CHECKPOINT_PATH \
                   --mlperf-conf ../../mlperf.conf \
                   --user-conf $USER_CONF \

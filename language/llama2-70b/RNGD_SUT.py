@@ -21,6 +21,10 @@ from pathlib import Path
 import mlperf_loadgen as lg
 from dataset import Dataset
 from furiosa_llm_models.llama.symbolic.mlperf_submission import LlamaForCausalLM
+# from furiosa_llm_models.llama.paged_attention_optimized_packed_rope import LlamaForCausalLM
+from transformers.generation.logits_process import \
+    MinNewTokensLengthLogitsProcessor
+from transformers.generation.stopping_criteria import MaxLengthCriteria
 
 from SUT import SUT as PyTorchSUT, FirstTokenStreamer
 from RNGD_generator import MLPerfSubmissionGreedySearch
@@ -34,23 +38,20 @@ gen_kwargs = {
     "num_beams": 1,
     "do_sample": False
 }
-# GenerationConfig {
-#   "_from_model_config": true,
-#   "bos_token_id": 1,
-#   "eos_token_id": 2,
-#   "max_length": 1425,
-#   "max_new_tokens": 256,
-#   "min_new_tokens": 1,
-#   "pad_token_id": 0,
-#   "transformers_version": "4.31.0"
-# }
+
 EARLY_STOPPING = True
-PAD_TOKEN_ID = 0
-EOS_TOKEN_ID = 2
+PAD_TOKEN_ID = EOS_TOKEN_ID = 2
+MAX_LENGTH = 2048
 MAX_NEW_TOKENS = 1024
 MIN_NEW_TOKENS = 1
 NUM_BEAMS = 1
 DO_SAMPLE = False
+RETURN_DICT_IN_GENERATE = False
+LOGITS_PROCESSOR = MinNewTokensLengthLogitsProcessor
+STOPPING_CRITERIA = MaxLengthCriteria
+KV_DTYPE = torch.float32
+BUCKET_SIZE = 2048
+
 
 class SUT(PyTorchSUT):
     def process_queries(self):
@@ -84,7 +85,9 @@ class SUT(PyTorchSUT):
                 input_ids_tensor = []
                 input_masks_tensor = []
                 input_len = []
+                max_input_len = max
                 for q in qitem:
+                    # max padding
                     input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
                                                 (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
                                                 value=self.tokenizer.pad_token_id))
@@ -97,16 +100,30 @@ class SUT(PyTorchSUT):
 
                 assert input_ids_tensor.shape == input_masks_tensor.shape
                 assert input_ids_tensor.shape[0] <= self.batch_size
-
+            
+                
                 tik2 = time.time()
-
-                pred_output_tokens = self.generator.generate(
-                    input_ids=input_ids_tensor,
-                    attention_mask=input_masks_tensor,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    **gen_kwargs
+                
+                logits_processor = LOGITS_PROCESSOR(
+                    input_ids_tensor.shape[-1], MIN_NEW_TOKENS, EOS_TOKEN_ID
+                )
+                stopping_criteria = STOPPING_CRITERIA(
+                    MAX_LENGTH,
+                    getattr(self.model, "max_position_embeddings", None),
                 )
 
+                pred_output_tokens = self.generator.generate(
+                     input_ids=input_ids_tensor,
+                    attention_mask=input_masks_tensor,
+                    logits_processor=logits_processor,
+                    stopping_criteria=stopping_criteria,
+                    max_length=MAX_LENGTH,
+                    pad_token_id=PAD_TOKEN_ID,
+                    eos_token_id=EOS_TOKEN_ID,
+                    return_dict_in_generate=RETURN_DICT_IN_GENERATE,
+                    kv_dtype=KV_DTYPE,
+                    bucket_size=BUCKET_SIZE,
+                )
                 tik3 = time.time()
 
                 processed_output = self.data_object.postProcess(pred_output_tokens,
@@ -155,7 +172,6 @@ class SUT(PyTorchSUT):
             model_max_length=1024,
             padding_side="left",
             use_fast=False,)
-
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
         self.generator = MLPerfSubmissionGreedySearch(self.model)

@@ -1,38 +1,30 @@
-import abc
-import copy
 import logging
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-from transformers import PreTrainedModel
-from transformers.generation import (
-    BeamScorer,
+from transformers import (GPTJConfig, LlamaConfig, PretrainedConfig,
+                          PreTrainedModel)
+from transformers.generation.logits_process import LogitsProcessorList
+from transformers.generation.stopping_criteria import StoppingCriteriaList
+from transformers.generation.utils import GreedySearchDecoderOnlyOutput
+from transformers.modeling_outputs import (CausalLMOutputWithCrossAttentions,
+                                           CausalLMOutputWithPast)
+
+SUPPORTED_GENERATION_RETURN_DICT_TYPES = (
+    CausalLMOutputWithPast,
+    CausalLMOutputWithCrossAttentions,
 )
-from transformers.generation.logits_process import (
-    LogitsProcessorList,
-)
-from transformers.generation.stopping_criteria import (
-    StoppingCriteriaList,
-    validate_stopping_criteria,
-)
-from transformers.generation.utils import BeamSearchDecoderOnlyOutput, GreedySearchDecoderOnlyOutput
-from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions, CausalLMOutputWithPast
-
-from typing import List, Tuple
-
-import torch
-from transformers import (
-    GPTJConfig,
-    LlamaConfig,
-    PretrainedConfig,
-)
-
-
-
-SUPPORTED_GENERATION_RETURN_DICT_TYPES = (CausalLMOutputWithPast, CausalLMOutputWithCrossAttentions)
+MAX_PACKING_PER_ROW: int = 254
+MAX_BATCH_SIZE: int = 4
+BLOCK_SIZE: int = 1
 logger = logging.getLogger(__name__)
 
+
 class MLPerfSubmissionGreedySearch:
+    def __init__(self, model: PreTrainedModel) -> None:
+        self.model = model
+        self.model_config = model.config
+
     @torch.no_grad()
     def generate(
         self,
@@ -57,9 +49,9 @@ class MLPerfSubmissionGreedySearch:
         if bucket_size is None:
             raise ValueError("`bucket_size` is required for Paged Attention.")
 
-        key_value_blocks = model_kwargs.get("key_value_blocks") or self.create_key_value_blocks(
-            batch_size, bucket_size, kv_dtype, device
-        )
+        key_value_blocks = model_kwargs.get(
+            "key_value_blocks"
+        ) or self.create_key_value_blocks(batch_size, bucket_size, kv_dtype, device)
         self.initialize_key_value_block_indices(key_value_blocks)
         # ----------- initial_settings -----------------
         starting_input_ids = input_ids
@@ -69,14 +61,16 @@ class MLPerfSubmissionGreedySearch:
         # TODO(MAX BATCH CHECK ONLY EXISTS FOR THIS PYTHON GENERATOR)
         # In vllm, generate is async and inner scheduler decides which batch to use based on
         # memory allocation
-        assert batch_size <= self.max_batch_size
+        assert batch_size <= MAX_BATCH_SIZE
 
         starting_position_ids = starting_attention_mask.long().cumsum(-1) - 1
         starting_position_ids.masked_fill_(starting_attention_mask == 0, 1)
 
         # ----------- adjust to bucket settings --------
         device = input_ids.device
-        attention_mask = torch.zeros((batch_size, bucket_size), dtype=torch.int).to(device)
+        attention_mask = torch.zeros((batch_size, bucket_size), dtype=torch.int).to(
+            device
+        )
         attention_mask[:, :prompt_len] = starting_attention_mask
 
         input_ids = torch.full(
@@ -84,7 +78,9 @@ class MLPerfSubmissionGreedySearch:
         ).to(device)
         input_ids[:, :prompt_len] = starting_input_ids
 
-        position_ids = torch.zeros((batch_size, bucket_size), dtype=torch.long).to(device)
+        position_ids = torch.zeros((batch_size, bucket_size), dtype=torch.long).to(
+            device
+        )
         position_ids[:, :prompt_len] = starting_position_ids
 
         sequence_idx = prompt_len - 1
@@ -92,8 +88,9 @@ class MLPerfSubmissionGreedySearch:
 
         scores = None
 
-        batch_size = input_ids.shape[0]
-        unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
+        unfinished_sequences = torch.ones(
+            batch_size, dtype=torch.long, device=input_ids.device
+        ).to(device)
         if isinstance(eos_token_id, int):
             eos_token_id = [eos_token_id]
         eos_token_id_tensor = torch.tensor(eos_token_id).to(input_ids.device)
@@ -102,8 +99,8 @@ class MLPerfSubmissionGreedySearch:
         # start generating new tokens
         for i in range(max_length - prompt_len):
             if is_prefill:
-                (new_key_location, new_value_location) = self.prepare_prefill_input_metadata(
-                    attention_mask
+                (new_key_location, new_value_location) = (
+                    self.prepare_prefill_input_metadata(attention_mask)
                 )
 
                 (
@@ -123,20 +120,19 @@ class MLPerfSubmissionGreedySearch:
                 )  # original attention mask, original position ids
 
                 forward_kwargs = {
-                    "input_ids": packed_input_ids,
+                    "input_ids": packed_input_ids.to(device),
                     "attention_mask": None,
-                    "causal_mask": causal_mask,
-                    "position_ids": packed_position_ids,
+                    "causal_mask": causal_mask.to(device),
+                    "position_ids": packed_position_ids.to(device),
                     "past_key_values": key_value_blocks,
-                    "new_key_location": new_key_location,
-                    "new_value_location": new_value_location,
+                    "new_key_location": new_key_location.to(device),
+                    "new_value_location": new_value_location.to(device),
                     "past_valid_key_indices": None,
                     "past_valid_value_indices": None,
                     "is_prefill": is_prefill,
                     "bucket_size": bucket_size,
                     "use_cache": False,
                 }
-
             else:
                 (input_ids, attention_mask, position_ids) = self.prepare_decode_inputs(
                     next_input_ids=next_tokens,
@@ -153,7 +149,6 @@ class MLPerfSubmissionGreedySearch:
                     valid_key_indices,
                     valid_value_indices,
                 ) = self.prepare_decode_input_metadata()
-
                 forward_kwargs = {
                     "input_ids": input_ids,
                     "attention_mask": attention_mask,
@@ -198,7 +193,9 @@ class MLPerfSubmissionGreedySearch:
                 is_prefill,
             )
 
-            starting_input_ids = torch.cat([starting_input_ids, next_tokens[:, None]], dim=-1)
+            starting_input_ids = torch.cat(
+                [starting_input_ids, next_tokens[:, None]], dim=-1
+            )
 
             if eos_token_id is not None:
                 unfinished_sequences = unfinished_sequences.mul(
@@ -208,7 +205,8 @@ class MLPerfSubmissionGreedySearch:
                 )
                 if unfinished_sequences.max() == 0:
                     break
-
+            if sequence_idx == 10:
+                break
             if stopping_criteria(starting_input_ids, scores):
                 break
 
@@ -220,7 +218,9 @@ class MLPerfSubmissionGreedySearch:
         # reset must be called
         self.reset()
         if return_dict_in_generate:
-            return GreedySearchDecoderOnlyOutput(sequences=starting_input_ids, scores=scores)
+            return GreedySearchDecoderOnlyOutput(
+                sequences=starting_input_ids, scores=scores
+            )
         return starting_input_ids
 
     def prepare_prefill_input_metadata(
@@ -382,12 +382,13 @@ class MLPerfSubmissionGreedySearch:
 
         else:
             next_token_logits = logits[:, 0, :]  # for decode seq_len would just be 1
-
         next_tokens_scores = logits_processor(input_ids, next_token_logits)
         next_tokens = torch.argmax(next_tokens_scores, dim=-1)
-        next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
+        next_tokens = next_tokens * unfinished_sequences + pad_token_id * (
+            1 - unfinished_sequences
+        )
         return next_tokens
-    
+
     def create_key_value_blocks(
         self,
         batch_size: int,
@@ -395,12 +396,12 @@ class MLPerfSubmissionGreedySearch:
         kv_dtype: torch.dtype,
         device: torch.device,
     ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
-        batch_size = min(batch_size, self.max_batch_size)
+        batch_size = min(batch_size, MAX_BATCH_SIZE)
 
         key_value_blocks = create_key_value_blocks(
             model_config=self.model_config,
             batch_size=batch_size,
-            block_size=self.block_size,
+            block_size=BLOCK_SIZE,
             device=device,
             bucket_size=bucket_size,
             kv_dtype=kv_dtype,
@@ -413,7 +414,7 @@ class MLPerfSubmissionGreedySearch:
                 f"Bucket size ({bucket_size}) should be divisible by block size ({block_size})"
             )
 
-        if self.block_size != 1:
+        if BLOCK_SIZE != 1:
             raise ValueError(
                 "Block size is fixed for RNGD architecture. Got block_size: {block_size} != 1"
             )
@@ -438,16 +439,22 @@ class MLPerfSubmissionGreedySearch:
         self.total_block_count = block_indices
 
     def move_kv_cache_block_in_place(
-        self, seq_idx: int, new_location: torch.Tensor, existing_block_indices: List[List[int]]
+        self,
+        seq_idx: int,
+        new_location: torch.Tensor,
+        existing_block_indices: List[List[int]],
     ) -> None:
         # new key location should always be shape [batch, 1]
-        for single_batch_block_indices, new_index in zip(existing_block_indices, new_location):
+        for single_batch_block_indices, new_index in zip(
+            existing_block_indices, new_location
+        ):
             single_batch_block_indices[seq_idx] = new_index.item()
 
     def reset(self):
         self.active_key_block_indices: List[List[int]] = []
         self.active_value_block_indices: List[List[int]] = []
         self.available_block_indices = list(range(1, self.total_block_count))
+
 
 def greedy_attention_packing(
     input_ids: torch.Tensor,
@@ -516,7 +523,9 @@ def greedy_attention_packing(
     packed_shape = (packed_batch_size, bucket_size)
 
     packed_attention_mask = torch.zeros(packed_shape, dtype=torch.bool)
-    packed_input_ids = torch.full(packed_shape, fill_value=pad_token_id, dtype=torch.int32)
+    packed_input_ids = torch.full(
+        packed_shape, fill_value=pad_token_id, dtype=torch.int32
+    )
     packed_new_key_location = torch.zeros(packed_shape, dtype=torch.int32)
     packed_new_value_location = torch.zeros(packed_shape, dtype=torch.int32)
     position_ids = torch.ones(packed_shape, dtype=torch.long)
@@ -525,7 +534,9 @@ def greedy_attention_packing(
     if compact_mask:
         causal_mask = torch.zeros((packed_batch_size, bucket_size), dtype=torch.uint8)
     else:
-        causal_mask = torch.zeros((packed_batch_size, bucket_size, bucket_size), dtype=torch.bool)
+        causal_mask = torch.zeros(
+            (packed_batch_size, bucket_size, bucket_size), dtype=torch.bool
+        )
 
     # fill the new attention mask and mark the logit locations
     for index, target_location in enumerate(target_locations):
@@ -537,12 +548,12 @@ def greedy_attention_packing(
             packed_input_ids[index][start:end] = input_ids[original_index][
                 original_start:original_end
             ]
-            packed_new_key_location[index][start:end] = new_key_location[original_index][
-                original_start:original_end
-            ]
-            packed_new_value_location[index][start:end] = new_value_location[original_index][
-                original_start:original_end
-            ]
+            packed_new_key_location[index][start:end] = new_key_location[
+                original_index
+            ][original_start:original_end]
+            packed_new_value_location[index][start:end] = new_value_location[
+                original_index
+            ][original_start:original_end]
             position_ids[index][start:end] = torch.arange(end - start)
             logit_target_location.append(end - 1)
 
@@ -563,8 +574,6 @@ def greedy_attention_packing(
         packed_new_key_location,
         packed_new_value_location,
     )
-
-
 
 
 def get_model_dimensions(config: PretrainedConfig) -> Tuple[int, int, int]:
