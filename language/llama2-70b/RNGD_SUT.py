@@ -50,6 +50,7 @@ RETURN_DICT_IN_GENERATE = False
 LOGITS_PROCESSOR = MinNewTokensLengthLogitsProcessor
 STOPPING_CRITERIA = MaxLengthCriteria
 KV_DTYPE = torch.float32
+QUANT_KV_DTYPE = torch.int8
 BUCKET_SIZE = 2048
 
 # valid only for LlamaForCausalLM
@@ -57,6 +58,23 @@ TRANSFORMER_LAYER_MODULE = "model.layers"
 
 
 class SUT(PyTorchSUT):
+    def __init__(self,
+                 model_path=None,
+                 dtype="bfloat16",
+                 device="cpu",
+                 batch_size=None,
+                 total_sample_count=24576,
+                 dataset_path=None,
+                 use_cached_outputs=False,  # Set this to True *only for test accuracy runs* in case your prior session was killed partway through
+                 workers=1,
+                 args=None):
+        super().__init__(model_path, dtype, device, batch_size, total_sample_count, dataset_path, use_cached_outputs, workers)
+        self.quantize = args.quantize
+        self.torch_numeric_optim = args.torch_numeric_optim
+        self.quant_config_path = args.quant_config_path
+        self.quant_param_path = args.quant_param_path
+        self.quant_format_path = args.quant_format_path
+
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic """
 
@@ -124,7 +142,7 @@ class SUT(PyTorchSUT):
                     pad_token_id=PAD_TOKEN_ID,
                     eos_token_id=EOS_TOKEN_ID,
                     return_dict_in_generate=RETURN_DICT_IN_GENERATE,
-                    kv_dtype=KV_DTYPE,
+                    kv_dtype=self.kv_dtype,
                     bucket_size=BUCKET_SIZE,
                 )
                 tik3 = time.time()
@@ -182,7 +200,25 @@ class SUT(PyTorchSUT):
         if hasattr(self.model, "hf_device_map"):
             device_map = {k.split(TRANSFORMER_LAYER_MODULE + ".")[1]: v for k, v in self.model.hf_device_map.items() if TRANSFORMER_LAYER_MODULE in k}
 
-        self.generator = MLPerfSubmissionGreedySearch(self.model, device_map=device_map)
+        if self.quantize:
+            from quantization import quantize_model
+            from quantization.utils import random_seed, set_optimization
+
+            random_seed()
+            set_optimization(self.torch_numeric_optim)
+
+            if self.device != "cuda:0":
+                raise ValueError(
+                    "Inference on a device other than GPU is not supported yet."
+                )
+            traced_model = self.model.trace_all()
+            model= quantize_model(traced_model, qconfig_path=self.quant_config_path, qparam_path=self.quant_param_path, qformat_path=self.quant_format_path)
+            self.kv_dtype = QUANT_KV_DTYPE
+        else:
+            model = self.model.trace_all()
+            self.kv_dtype = KV_DTYPE
+            
+        self.generator = MLPerfSubmissionGreedySearch(model, device_map=device_map)
         print("Loaded tokenizer")
 
 

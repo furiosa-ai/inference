@@ -27,6 +27,11 @@ def get_args():
     parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
     parser.add_argument("--enable-log-trace", action="store_true", help="Enable log tracing. This file can become quite large")
     parser.add_argument("--num-workers", type=int, default=1, help="Number of workers to process queries")
+    parser.add_argument("--quant_config_path", help="a config for model quantization")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
+    parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
 
     args = parser.parse_args()
     return args
@@ -75,15 +80,26 @@ def main():
     }
     
     sut_cls = sut_map[args.scenario.lower()]
-
-    sut = sut_cls(
-        model_path=args.model_path,
-        dtype=args.dtype,
-        batch_size=args.batch_size,
-        dataset_path=args.dataset_path,
-        total_sample_count=args.total_sample_count,
-        device=args.device,
-    )
+    
+    if args.backend == "pytorch":
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device,
+        )
+    if args.backend == "rngd":
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device,
+            args=args,
+        )
 
     # Start sut before loadgen starts
     sut.start()
