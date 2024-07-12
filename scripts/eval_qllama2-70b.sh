@@ -34,8 +34,8 @@ CALIBRATE=${CALIBRATE:=false}
 N_CALIB=${N_CALIB:=1000} # total_len=1,000
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
-QUANT_PARAM_PATH=$quant_data_dir/quant_param.npy
-QUANT_FORMAT_PATH=$quant_data_dir/quant_format.yaml
+QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
+QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
@@ -45,7 +45,7 @@ printf "\tDEVICE: $DEVICE\n"
 
 CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
-LOG_PATH=$log_dir/$model_name/$SCENARIO/$DATA_TYPE/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$log_dir/$model_name/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
 
 export LOG_PATH
 
@@ -70,7 +70,6 @@ python -u main.py --scenario $SCENARIO \
                   --backend $BACKEND \
                   --model-path $CHECKPOINT_PATH \
                   --mlperf-conf ../../mlperf.conf \
-                  --user-conf $USER_CONF \
                   --total-sample-count $N_COUNT \
                   --device $DEVICE \
                   --dataset-path $DATASET_PATH \
@@ -80,8 +79,7 @@ python -u main.py --scenario $SCENARIO \
                   --quantize \
                   --quant_config_path $QUANT_CONFIG_PATH \
                   --quant_param_path $QUANT_PARAM_PATH \
-                  --quant_format_path $QUANT_FORMAT_PATH \
-                  --model_source $MODEL_SOURCE \
+                  --quant_format_path $QUANT_FORMAT_PATH
 
 duration=$SECONDS
 printf "$((duration / 60)) minutes and $((duration % 60)) seconds elapsed." &> $LOG_PATH/elapsed_time.log

@@ -31,8 +31,10 @@ cd -
 # pull model and dataset
 printf "\n============= STEP-3: Pull dvc data =============\n"
 pip install dvc[s3]
-dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/pytorch_model-0000*.dvc --force
-dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/pytorch_model-0001*.dvc --force
+dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/model-0000*.dvc --force
+dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/model-0001*.dvc --force
+# dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/pytorch_model-0000*.dvc --force
+# dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/pytorch_model-0001*.dvc --force
 shopt -s extglob
 dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/!(model-000*|pytorch_model-000*).dvc --force
 dvc pull $data_dir/dataset/open-orca/validation --force

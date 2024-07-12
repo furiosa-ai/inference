@@ -236,10 +236,10 @@ class SUT(PyTorchSUT):
             random_seed()
             set_optimization(self.torch_numeric_optim)
 
-            if self.device != "cuda:0":
-                raise ValueError(
-                    "Inference on a device other than GPU is not supported yet."
-                )
+            # if self.device != "cuda:0":
+            #     raise ValueError(
+            #         "Inference on a device other than GPU is not supported yet."
+            #     )
             traced_model = self.model.trace_all()
             model = quantize_model(
                 traced_model,

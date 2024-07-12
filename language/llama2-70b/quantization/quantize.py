@@ -18,10 +18,13 @@ def _quantize(
         model,
         qformat_path=qformat_path,
         qparam_path=qparam_path,
-        disable_inout=(True, False),
+        disable_inout=(True, True),
         delete_org_weight=True,
         decode_phase=quantized_prefill is not None,
         quantized_prefill_model=quantized_prefill,
+        # https://github.com/furiosa-ai/inference/pull/29/files#diff-9b228ac2c8c424039f8ab41443631c4097f3c3abf73a05b3e327c51ed30d394dR65
+        # TODO: the original code uses fp32, but we use fp64 here for validation.
+        weighted_op_emul_dtype="fp64",
         **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 
