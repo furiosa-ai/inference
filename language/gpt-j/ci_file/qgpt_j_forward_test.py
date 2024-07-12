@@ -3,25 +3,23 @@ from transformers import AutoConfig
 import torch
 from torch.utils.data import DataLoader
 import json
-import pdb;
-pdb.set_trace()
-import quantization
-from quantization import calibration_utils
 import model_compressor
+
 from dataset import Dataset
 import joblib
 import pickle
 
 import argparse
-from language.gptj.quantization.calibrate import load_pytorch_model, load_mlperf_submission_model
-from language.gptj.quantization.quantize import quantize_model
-from language.gptj.generator_RNGD import MLPerfSubmissionBeamSearch
+from quantization.calibrate import load_pytorch_model, load_mlperf_submission_model
+from quantization.quantize import quantize_model
+from generator_RNGD import MLPerfSubmissionBeamSearch
 from transformers.generation.logits_process import MinNewTokensLengthLogitsProcessor
 from transformers.generation.stopping_criteria import MaxLengthCriteria
 from transformers.generation.utils import BeamSearchScorer
 
-from ci_test.utils.check_logit_equivalence import compare_logits
-from ci_test.utils.turn_on_mcp_dumping import turn_on_mcp_dumping
+from ci_file.utils.check_logit_equality import compare_logits
+
+from ci_file.utils.turn_on_mcp_dumping import turn_on_mcp_dumping
 
 
 EARYLY_STOPPING = True
@@ -100,15 +98,15 @@ def obtain_quant_graphs(model, qconfig_path, golden_quant_param_path, golden_qua
     
 
 
-def get_generator_for_golden_model(model_path, qconfig_path, golden_quant_param_path, golden_quant_format_path, use_gpu, logit_folder_path):
-    golden_model = load_pytorch_model(model_path, use_gpu)
+def get_generator_for_golden_model(model_path, qconfig_path, golden_quant_param_path, golden_quant_format_path, gpu, logit_folder_path):
+    golden_model = load_pytorch_model(model_path, gpu)
     golden_model_type = type(golden_model)
     quant_golden_models, golden_input_names, golden_concrete_args = obtain_quant_graphs(
-                                                                            args.model_path,
-                                                                            args.qconfig_path, 
-                                                                            args.golden_quant_param_path, 
-                                                                            args.golden_quant_format_path, 
-                                                                            args.use_gpu
+                                                                            golden_model,
+                                                                            qconfig_path, 
+                                                                            golden_quant_param_path, 
+                                                                            golden_quant_format_path, 
+                                                                            gpu
                                                                             ) 
 
     turn_on_mcp_dumping(quant_golden_models, logit_folder_path + '/golden_prefill_logits.pkl', logit_folder_path + '/golden_decode_logits.pkl')
@@ -119,15 +117,14 @@ def get_generator_for_golden_model(model_path, qconfig_path, golden_quant_param_
 
 def get_generator_for_submission_model(model_path, qconfig_path, submission_quant_param_path, submission_quant_format_path, use_gpu, logit_folder_path):
     
-    submission_model = load_mlperf_submission_model(model_path, use_gpu)
+    submission_model = load_mlperf_submission_model(model_path, gpu)
     model_config = submission_model.config
-    model_type = type(golden_model)
     quant_submission_model, input_names, concrete_args, = obtain_quant_graphs(
-                                                                            args.model_path,
-                                                                            args.qconfig_path, 
-                                                                            args.golden_quant_param_path, 
-                                                                            args.golden_quant_format_path, 
-                                                                            args.use_gpu
+                                                                            submission_model,
+                                                                            qconfig_path, 
+                                                                            golden_quant_param_path, 
+                                                                            golden_quant_format_path, 
+                                                                            gpu
                                                                             ) 
 
     turn_on_mcp_dumping(quant_golden_models, logit_folder_path + '/submission_prefill_logits.pkl', logit_folder_path + '/submission_decode_logits.pkl',)
@@ -202,19 +199,20 @@ def perform_generation_to_check_equality(golden_model_generator, submission_mode
 
 #load model_script
 def compare_model_outputs(args):
+    args = get_args()
 
     golden_model_generator = get_generator_for_golden_model(args.model_path,
-                                                        args.qconfig_path, 
+                                                        args.quant_config_path, 
                                                         args.golden_quant_param_path, 
                                                         args.golden_quant_format_path, 
-                                                        args.use_gpu,
+                                                        args.gpu,
                                                         args.logit_folder_path,)
 
     submission_model_generator = get_generator_for_golden_model(args.model_path,
-                                                        args.qconfig_path, 
+                                                        args.quant_config_path, 
                                                         args.submission_quant_param_path, 
                                                         args.submission_quant_format_path, 
-                                                        args.use_gpu,
+                                                        args.gpu,
                                                         args.logit_folder_path,)
 
 
