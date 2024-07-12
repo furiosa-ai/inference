@@ -46,8 +46,7 @@ KV_DTYPE = torch.float32
 QUANT_KV_DTYPE = torch.int8
 BUCKET_SIZE = 2048
 
-# valid only for LlamaForCausalLM
-TRANSFORMER_LAYER_MODULE = "model.layers"
+LLAMA_TRANSFORMER_LAYER = "model.layers"
 
 
 class SUT(PyTorchSUT):
@@ -224,9 +223,9 @@ class SUT(PyTorchSUT):
         # Needs to place paged attention key value blocks on the same device as the transformer layers
         if hasattr(self.model, "hf_device_map"):
             device_map = {
-                k.split(TRANSFORMER_LAYER_MODULE + ".")[1]: v
+                k.split(LLAMA_TRANSFORMER_LAYER + ".")[1]: v
                 for k, v in self.model.hf_device_map.items()
-                if TRANSFORMER_LAYER_MODULE in k
+                if LLAMA_TRANSFORMER_LAYER in k
             }
 
         if self.quantize:
@@ -256,6 +255,7 @@ class SUT(PyTorchSUT):
         print("Loaded tokenizer")
 
 
+# TODO: Implement the server scenario for RNGD
 class SUTServer(SUT):
     def __init__(
         self,
@@ -268,7 +268,7 @@ class SUTServer(SUT):
         workers=1,
         args=None,
     ):
-
+        raise NotImplementedError("Server scenario for RNGD is not implemented yet.")
         super().__init__(
             model_path=model_path,
             dtype=dtype,
