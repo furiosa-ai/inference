@@ -52,6 +52,9 @@ STOPPING_CRITERIA = MaxLengthCriteria
 KV_DTYPE = torch.float32
 BUCKET_SIZE = 2048
 
+# valid only for LlamaForCausalLM
+TRANSFORMER_LAYER_MODULE = "model.layers"
+
 
 class SUT(PyTorchSUT):
     def process_queries(self):
@@ -174,7 +177,12 @@ class SUT(PyTorchSUT):
             use_fast=False,)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.generator = MLPerfSubmissionGreedySearch(self.model)
+        device_map = None
+        # Needs to place paged attention key value blocks on the same device as the transformer layers
+        if hasattr(self.model, "hf_device_map"):
+            device_map = {k.split(TRANSFORMER_LAYER_MODULE + ".")[1]: v for k, v in self.model.hf_device_map.items() if TRANSFORMER_LAYER_MODULE in k}
+
+        self.generator = MLPerfSubmissionGreedySearch(self.model, device_map=device_map)
         print("Loaded tokenizer")
 
 

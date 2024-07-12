@@ -21,9 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 class MLPerfSubmissionGreedySearch:
-    def __init__(self, model: PreTrainedModel) -> None:
+    def __init__(
+        self, model: PreTrainedModel, device_map: Optional[Dict[str, int]] = None
+    ) -> None:
         self.model = model
         self.model_config = model.config
+        self.device_map = device_map
 
     @torch.no_grad()
     def generate(
@@ -51,7 +54,9 @@ class MLPerfSubmissionGreedySearch:
 
         key_value_blocks = model_kwargs.get(
             "key_value_blocks"
-        ) or self.create_key_value_blocks(batch_size, bucket_size, kv_dtype, device)
+        ) or self.create_key_value_blocks(
+            batch_size, bucket_size, kv_dtype, device, self.device_map
+        )
         self.initialize_key_value_block_indices(key_value_blocks)
         # ----------- initial_settings -----------------
         starting_input_ids = input_ids
@@ -395,6 +400,7 @@ class MLPerfSubmissionGreedySearch:
         bucket_size: int,
         kv_dtype: torch.dtype,
         device: torch.device,
+        device_map: Optional[Dict[str, int]] = None,
     ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
         batch_size = min(batch_size, MAX_BATCH_SIZE)
 
@@ -405,6 +411,7 @@ class MLPerfSubmissionGreedySearch:
             device=device,
             bucket_size=bucket_size,
             kv_dtype=kv_dtype,
+            device_map=device_map,
         )
 
         _, block_size, _, _ = key_value_blocks[0][0].shape
@@ -603,6 +610,7 @@ def get_key_value_blocks(
     block_size: int,
     kv_dtype: torch.dtype = torch.float32,
     device: torch.device = torch.device("cpu"),
+    device_map: Optional[Dict[str, int]] = None,
 ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
     # Example
     # num_layers = 2
@@ -619,7 +627,9 @@ def get_key_value_blocks(
     )
 
     key_value_blocks = []
-    for _ in range(num_layers):
+    for layer_idx in range(num_layers):
+        if device_map is not None:
+            device = torch.device(f"cuda:{device_map[str(layer_idx)]}")
         key_value_blocks.append(
             (
                 # key shape: (num_blocks, block_size, num_heads, head_size) = (129, 16, 8, 64)
@@ -638,6 +648,7 @@ def create_key_value_blocks(
     kv_dtype: torch.dtype,
     block_size: int,
     device: torch.device,
+    device_map: Optional[Dict[str, int]] = None,
 ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
     num_layers, num_heads, head_size = get_model_dimensions(model_config)
 
@@ -656,6 +667,7 @@ def create_key_value_blocks(
         block_size,
         kv_dtype=kv_dtype,
         device=device,
+        device_map=device_map,
     )
     if len(key_value_blocks) != num_layers:
         raise ValueError(
