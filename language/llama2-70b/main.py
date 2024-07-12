@@ -80,7 +80,7 @@ def main():
     }
     
     sut_cls = sut_map[args.scenario.lower()]
-    
+
     if args.backend == "pytorch":
         sut = sut_cls(
             model_path=args.model_path,

@@ -2,6 +2,8 @@ import logging
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
+from torch._dynamo.eval_frame import OptimizedModule
+from torch.fx import GraphModule
 from transformers import (GPTJConfig, LlamaConfig, PretrainedConfig,
                           PreTrainedModel)
 from transformers.generation.logits_process import LogitsProcessorList
@@ -22,10 +24,32 @@ logger = logging.getLogger(__name__)
 
 class MLPerfSubmissionGreedySearch:
     def __init__(
-        self, model: PreTrainedModel, device_map: Optional[Dict[str, int]] = None
+        self,
+        model: Optional[PreTrainedModel] = None,
+        prefill: Optional[GraphModule] = None,
+        decode: Optional[GraphModule] = None,
+        device_map: Optional[Dict[str, int]] = None,
     ) -> None:
-        self.model = model
-        self.model_config = model.config
+        if isinstance(model, PreTrainedModel):
+            self.model = model
+        # OptimizedModule cannot be checked by isinstance
+        # TypeError: Subscripted generics cannot be used with class and instance checks
+        if type(model) == OptimizedModule:
+            self.model = model
+        if (
+            isinstance(model, Dict)
+            and isinstance(model["prefill"], GraphModule)
+            and isinstance(model["decode"], GraphModule)
+        ):
+            self.model = self.prefill = model["prefill"]
+            self.decode = model["decode"]
+        if prefill is not None and decode is not None:
+            self.model = self.prefill = prefill
+            self.decode = decode
+
+        if self.model is None:
+            raise ValueError("model is not provided or valid.")
+        self.model_config = self.model.config
         self.device_map = device_map
 
     @torch.no_grad()
@@ -138,6 +162,10 @@ class MLPerfSubmissionGreedySearch:
                     "bucket_size": bucket_size,
                     "use_cache": False,
                 }
+
+                # If the model is a GraphModule, we need to switch the model to prefill.
+                if isinstance(self.model, GraphModule) and self.model != self.prefill:
+                    self.model = self.prefill
             else:
                 (input_ids, attention_mask, position_ids) = self.prepare_decode_inputs(
                     next_input_ids=next_tokens,
@@ -169,6 +197,17 @@ class MLPerfSubmissionGreedySearch:
                     "use_cache": False,
                 }
 
+                # If the model is a GraphModule, we need to switch the model to decode.
+                if isinstance(self.model, GraphModule) and self.model != self.decode:
+                    self.model = self.decode
+
+            # remove all concrete args from forward_kwargs for they will not be used in the
+            # forward pass.
+            if isinstance(self.model, GraphModule):
+                for arg in self.model.concrete_args:
+                    if arg in forward_kwargs:
+                        del forward_kwargs[arg]
+
             outputs = self.model(**forward_kwargs)
 
             if not is_prefill:
@@ -185,7 +224,7 @@ class MLPerfSubmissionGreedySearch:
                 )
 
             # done
-            outputs = handle_outputs(outputs)
+            outputs = handle_outputs(outputs).to(input_ids.device)
 
             # done
             next_tokens = self.find_next_tokens(

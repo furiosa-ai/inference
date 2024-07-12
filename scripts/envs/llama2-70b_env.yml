@@ -10,7 +10,7 @@ dependencies:
       - datasets==2.17.1
       - sentencepiece==0.1.99
       - protobuf==4.25.3
-      - accelerate==0.21.0
+      - git+https://github.com/furiosa-ai/accelerate-compression.git@4d7b404041834d35727064e5b1dcfcd060319ad6#egg=accelerate
       - evaluate==0.4.0
       - nltk==3.8.1
       - absl-py==1.4.0

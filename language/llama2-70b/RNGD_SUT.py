@@ -1,33 +1,26 @@
-import os
-import time
-import numpy as np
 import array
-import torch
-from torch.nn.functional import pad
-from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers.generation.streamers import BaseStreamer
-
-import pickle
-import time
-import threading
-import tqdm
-import queue
-
 import logging
-from typing import TYPE_CHECKING, Optional, List
+import os
+import pickle
+import queue
+import threading
+import time
 from pathlib import Path
 
 import mlperf_loadgen as lg
-from dataset import Dataset
-from furiosa_llm_models.llama.symbolic.mlperf_submission import LlamaForCausalLM
-# from furiosa_llm_models.llama.paged_attention_optimized_packed_rope import LlamaForCausalLM
+import numpy as np
+import torch
+from furiosa_llm_models.llama.symbolic.mlperf_submission import \
+    LlamaForCausalLM  # isort:skip
+from RNGD_generator import MLPerfSubmissionGreedySearch
+from SUT import SUT as PyTorchSUT
+from SUT import FirstTokenStreamer
+from torch.nn.functional import pad
+from transformers import AutoTokenizer
 from transformers.generation.logits_process import \
     MinNewTokensLengthLogitsProcessor
 from transformers.generation.stopping_criteria import MaxLengthCriteria
 
-from SUT import SUT as PyTorchSUT, FirstTokenStreamer
-from RNGD_generator import MLPerfSubmissionGreedySearch
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("Llama-70B-SUT")
 
@@ -36,7 +29,7 @@ gen_kwargs = {
     "max_new_tokens": 1024,
     "min_new_tokens": 1,
     "num_beams": 1,
-    "do_sample": False
+    "do_sample": False,
 }
 
 EARLY_STOPPING = True
@@ -58,25 +51,36 @@ TRANSFORMER_LAYER_MODULE = "model.layers"
 
 
 class SUT(PyTorchSUT):
-    def __init__(self,
-                 model_path=None,
-                 dtype="bfloat16",
-                 device="cpu",
-                 batch_size=None,
-                 total_sample_count=24576,
-                 dataset_path=None,
-                 use_cached_outputs=False,  # Set this to True *only for test accuracy runs* in case your prior session was killed partway through
-                 workers=1,
-                 args=None):
-        super().__init__(model_path, dtype, device, batch_size, total_sample_count, dataset_path, use_cached_outputs, workers)
+    def __init__(
+        self,
+        model_path=None,
+        dtype="bfloat16",
+        device="cpu",
+        batch_size=None,
+        total_sample_count=24576,
+        dataset_path=None,
+        use_cached_outputs=False,  # Set this to True *only for test accuracy runs* in case your prior session was killed partway through
+        workers=1,
+        args=None,
+    ):
         self.quantize = args.quantize
         self.torch_numeric_optim = args.torch_numeric_optim
         self.quant_config_path = args.quant_config_path
         self.quant_param_path = args.quant_param_path
         self.quant_format_path = args.quant_format_path
+        super().__init__(
+            model_path,
+            dtype,
+            device,
+            batch_size,
+            total_sample_count,
+            dataset_path,
+            use_cached_outputs,
+            workers,
+        )
 
     def process_queries(self):
-        """Processor of the queued queries. User may choose to add batching logic """
+        """Processor of the queued queries. User may choose to add batching logic"""
 
         while True:
             qitem = self.query_queue.get()
@@ -109,22 +113,39 @@ class SUT(PyTorchSUT):
                 max_input_len = max
                 for q in qitem:
                     # max padding
-                    input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
-                                                (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
-                                                value=self.tokenizer.pad_token_id))
-                    input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
-                                                  (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
-                                                 value=0))
+                    input_ids_tensor.append(
+                        pad(
+                            self.data_object.input_ids[q.index],
+                            (
+                                max_seq_len - self.data_object.input_lens[q.index],
+                                0,
+                                0,
+                                0,
+                            ),
+                            value=self.tokenizer.pad_token_id,
+                        )
+                    )
+                    input_masks_tensor.append(
+                        pad(
+                            self.data_object.attention_masks[q.index],
+                            (
+                                max_seq_len - self.data_object.input_lens[q.index],
+                                0,
+                                0,
+                                0,
+                            ),
+                            value=0,
+                        )
+                    )
                     input_len.append(self.data_object.input_lens[q.index])
                 input_ids_tensor = torch.cat(input_ids_tensor)
                 input_masks_tensor = torch.cat(input_masks_tensor)
 
                 assert input_ids_tensor.shape == input_masks_tensor.shape
                 assert input_ids_tensor.shape[0] <= self.batch_size
-            
-                
+
                 tik2 = time.time()
-                
+
                 logits_processor = LOGITS_PROCESSOR(
                     input_ids_tensor.shape[-1], MIN_NEW_TOKENS, EOS_TOKEN_ID
                 )
@@ -134,7 +155,7 @@ class SUT(PyTorchSUT):
                 )
 
                 pred_output_tokens = self.generator.generate(
-                     input_ids=input_ids_tensor,
+                    input_ids=input_ids_tensor,
                     attention_mask=input_masks_tensor,
                     logits_processor=logits_processor,
                     stopping_criteria=stopping_criteria,
@@ -147,9 +168,11 @@ class SUT(PyTorchSUT):
                 )
                 tik3 = time.time()
 
-                processed_output = self.data_object.postProcess(pred_output_tokens,
-                                                                input_seq_lens=input_len,
-                                                                query_id_list=query_ids)
+                processed_output = self.data_object.postProcess(
+                    pred_output_tokens,
+                    input_seq_lens=input_len,
+                    query_id_list=query_ids,
+                )
 
             for i in range(len(qitem)):
                 n_tokens = processed_output[i].shape[0]
@@ -171,19 +194,20 @@ class SUT(PyTorchSUT):
                 else:
                     print(f"\tLoaded from cache: {_p}")
 
-
     def load_model(self):
         self.model = LlamaForCausalLM.from_pretrained(
             self.model_path,
             device_map="auto",
             low_cpu_mem_usage=True,
-            torch_dtype=self.amp_dtype
+            torch_dtype=self.amp_dtype,
         )
         print("Loaded model")
 
         self.device = torch.device(self.device)
         if self.device == "cpu":
-            self.model = self.model.to(self.device)  # Force CPU if your system has GPU and you specifically want CPU-only run
+            self.model = self.model.to(
+                self.device
+            )  # Force CPU if your system has GPU and you specifically want CPU-only run
 
         self.model.eval()
         self.model = self.model.to(memory_format=torch.channels_last)
@@ -192,13 +216,18 @@ class SUT(PyTorchSUT):
             self.model_path,
             model_max_length=1024,
             padding_side="left",
-            use_fast=False,)
+            use_fast=False,
+        )
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
         device_map = None
         # Needs to place paged attention key value blocks on the same device as the transformer layers
         if hasattr(self.model, "hf_device_map"):
-            device_map = {k.split(TRANSFORMER_LAYER_MODULE + ".")[1]: v for k, v in self.model.hf_device_map.items() if TRANSFORMER_LAYER_MODULE in k}
+            device_map = {
+                k.split(TRANSFORMER_LAYER_MODULE + ".")[1]: v
+                for k, v in self.model.hf_device_map.items()
+                if TRANSFORMER_LAYER_MODULE in k
+            }
 
         if self.quantize:
             from quantization import quantize_model
@@ -212,20 +241,43 @@ class SUT(PyTorchSUT):
                     "Inference on a device other than GPU is not supported yet."
                 )
             traced_model = self.model.trace_all()
-            model= quantize_model(traced_model, qconfig_path=self.quant_config_path, qparam_path=self.quant_param_path, qformat_path=self.quant_format_path)
+            model = quantize_model(
+                traced_model,
+                qconfig_path=self.quant_config_path,
+                qparam_path=self.quant_param_path,
+                qformat_path=self.quant_format_path,
+            )
             self.kv_dtype = QUANT_KV_DTYPE
         else:
             model = self.model.trace_all()
             self.kv_dtype = KV_DTYPE
-            
-        self.generator = MLPerfSubmissionGreedySearch(model, device_map=device_map)
+
+        self.generator = MLPerfSubmissionGreedySearch(**model, device_map=device_map)
         print("Loaded tokenizer")
 
 
 class SUTServer(SUT):
-    def __init__(self, model_path=None, dtype="bfloat16", device="cpu", total_sample_count=24576, dataset_path=None, batch_size=None, workers=1):
+    def __init__(
+        self,
+        model_path=None,
+        dtype="bfloat16",
+        device="cpu",
+        total_sample_count=24576,
+        dataset_path=None,
+        batch_size=None,
+        workers=1,
+        args=None,
+    ):
 
-        super().__init__(model_path=model_path, dtype=dtype, device=device, total_sample_count=total_sample_count, dataset_path=dataset_path, workers=workers)
+        super().__init__(
+            model_path=model_path,
+            dtype=dtype,
+            device=device,
+            total_sample_count=total_sample_count,
+            dataset_path=dataset_path,
+            workers=workers,
+            args=args,
+        )
 
         self.first_token_queue = queue.Queue()
 
@@ -241,7 +293,6 @@ class SUTServer(SUT):
         self.ft_response_thread = threading.Thread(target=self.process_first_tokens)
         self.ft_response_thread.start()
 
-
     def process_first_tokens(self):
 
         while True:
@@ -253,13 +304,15 @@ class SUTServer(SUT):
 
             first_tokens, response_id = first_token_item
 
-            response_data = array.array("B", np.array(first_tokens, np.float32).tobytes())
+            response_data = array.array(
+                "B", np.array(first_tokens, np.float32).tobytes()
+            )
             bi = response_data.buffer_info()
             response = [lg.QuerySampleResponse(response_id, bi[0], bi[1])]
             lg.FirstTokenComplete(response)
 
     def process_queries(self):
-        """Processor of the queued queries. User may choose to add batching logic """
+        """Processor of the queued queries. User may choose to add batching logic"""
         while True:
 
             qitem = self.query_queue.get()
@@ -269,30 +322,35 @@ class SUTServer(SUT):
             input_ids_tensor = self.data_object.input_ids[qitem.index]
             input_masks_tensor = self.data_object.attention_masks[qitem.index]
 
-            #TODO: This PoC is super slow with significant overhead. Best to create a patch to `generate`
+            # TODO: This PoC is super slow with significant overhead. Best to create a patch to `generate`
             tokens_cache = []
-            tokens_streamer = FirstTokenStreamer(self.first_token_queue, tokens_cache=tokens_cache, is_first_token=True, response_ids=[qitem.id])
+            tokens_streamer = FirstTokenStreamer(
+                self.first_token_queue,
+                tokens_cache=tokens_cache,
+                is_first_token=True,
+                response_ids=[qitem.id],
+            )
 
-            _ = self.model.generate(    input_ids=input_ids_tensor,
-                                        attention_mask=input_masks_tensor,
-                                        pad_token_id=self.tokenizer.pad_token_id,
-                                        streamer = tokens_streamer,
-                                        **gen_kwargs
-                                        )
+            _ = self.model.generate(
+                input_ids=input_ids_tensor,
+                attention_mask=input_masks_tensor,
+                pad_token_id=self.tokenizer.pad_token_id,
+                streamer=tokens_streamer,
+                **gen_kwargs,
+            )
 
             output_tokens = tokens_streamer.get_out_tokens()
             n_tokens = len(output_tokens)
-            response_array = array.array("B", np.array(output_tokens, np.int32).tobytes())
+            response_array = array.array(
+                "B", np.array(output_tokens, np.int32).tobytes()
+            )
             bi = response_array.buffer_info()
-            response = [lg.QuerySampleResponse(
-                qitem.id, bi[0], bi[1], n_tokens)]
+            response = [lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)]
             lg.QuerySamplesComplete(response)
-
 
     def issue_queries(self, query_samples):
 
         self.query_queue.put(query_samples[0])
-
 
     def stop(self):
         for _ in range(self.num_workers):
