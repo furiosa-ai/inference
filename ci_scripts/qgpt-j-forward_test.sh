@@ -66,7 +66,8 @@ fi
 N_DATA=${N_DATA:=2} 
 GOLDEN_QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param_golden.npy
 GOLDEN_QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format_golden.yaml
-LOGIT_FOLDER_PATH=ci_test/qgpt-j/logit_files
+LOGIT_FOLDER_PATH=ci_file/logit_files
+mkdir -p $LOGIT_FOLDER_PATH
 
 printf "\n============= STEP-2: Check the equivalence of logits obtained at each generation step =============\n"
 
@@ -77,6 +78,7 @@ python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
                                                 --submission_quant_format_path=$QUANT_FORMAT_PATH \
                                                 --submission_quant_param_path=$QUANT_PARAM_PATH \
                                                 --n_data=$N_DATA \
+                                                --dataset_path=$DATASET_PATH \
                                                 --logit_folder_path=$LOGIT_FOLDER_PATH \
                                                 --gpu
 

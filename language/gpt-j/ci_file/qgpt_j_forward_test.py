@@ -12,7 +12,7 @@ import pickle
 import argparse
 from quantization.calibrate import load_pytorch_model, load_mlperf_submission_model
 from quantization.quantize import quantize_model
-from generator_RNGD import MLPerfSubmissionBeamSearch
+from generator_RNGD import MLPerfSubmissionBeamSearch, expand_inputs_for_generation
 from transformers.generation.logits_process import MinNewTokensLengthLogitsProcessor
 from transformers.generation.stopping_criteria import MaxLengthCriteria
 from transformers.generation.utils import BeamSearchScorer
@@ -73,7 +73,7 @@ def get_args():
 
 
     
-def obtain_quant_graphs(model, qconfig_path, golden_quant_param_path, golden_quant_format_path, use_gpu):
+def obtain_quant_graphs(model, golden_quant_param_path, golden_quant_format_path, use_gpu):
 
     traced_models = model.trace_all()
 
@@ -88,10 +88,7 @@ def obtain_quant_graphs(model, qconfig_path, golden_quant_param_path, golden_qua
         }
 
 
-    quant_models = quantize_model(traced_models, 
-                                        qconfig_path, 
-                                        golden_quant_param_path,
-                                        golden_quant_format_path,)
+    quant_models = quantize_model(traced_models, golden_quant_param_path, golden_quant_format_path,)
     
     return quant_models, input_names, concrete_args 
                 
@@ -103,7 +100,6 @@ def get_generator_for_golden_model(model_path, qconfig_path, golden_quant_param_
     golden_model_type = type(golden_model)
     quant_golden_models, golden_input_names, golden_concrete_args = obtain_quant_graphs(
                                                                             golden_model,
-                                                                            qconfig_path, 
                                                                             golden_quant_param_path, 
                                                                             golden_quant_format_path, 
                                                                             gpu
@@ -111,25 +107,24 @@ def get_generator_for_golden_model(model_path, qconfig_path, golden_quant_param_
 
     turn_on_mcp_dumping(quant_golden_models, logit_folder_path + '/golden_prefill_logits.pkl', logit_folder_path + '/golden_decode_logits.pkl')
 
-                      
+    quant_golden_models = {"prefill_model": quant_golden_models["prefill"], "decode_model": quant_golden_models["decode"]}         
     
     return model_compressor.helper.QuantCausalLM(quant_golden_models, golden_model_type, golden_input_names, golden_concrete_args)
 
-def get_generator_for_submission_model(model_path, qconfig_path, submission_quant_param_path, submission_quant_format_path, use_gpu, logit_folder_path):
+def get_generator_for_submission_model(model_path, qconfig_path, submission_quant_param_path, submission_quant_format_path, gpu, logit_folder_path):
     
     submission_model = load_mlperf_submission_model(model_path, gpu)
     model_config = submission_model.config
-    quant_submission_model, input_names, concrete_args, = obtain_quant_graphs(
+    quant_submission_models, input_names, concrete_args, = obtain_quant_graphs(
                                                                             submission_model,
-                                                                            qconfig_path, 
-                                                                            golden_quant_param_path, 
-                                                                            golden_quant_format_path, 
+                                                                            submission_quant_param_path, 
+                                                                            submission_quant_format_path, 
                                                                             gpu
                                                                             ) 
 
-    turn_on_mcp_dumping(quant_golden_models, logit_folder_path + '/submission_prefill_logits.pkl', logit_folder_path + '/submission_decode_logits.pkl',)
+    turn_on_mcp_dumping(quant_submission_models, logit_folder_path + '/submission_prefill_logits.pkl', logit_folder_path + '/submission_decode_logits.pkl',)
 
-    return MLPerfSubmissionBeamSearch(model = quant_submission_model, model_config=model_config)
+    return MLPerfSubmissionBeamSearch(model = quant_submission_models, model_config=model_config)
 
 
 
@@ -138,7 +133,7 @@ def get_generator_for_submission_model(model_path, qconfig_path, submission_quan
     
 def perform_generation_to_check_equality(golden_model_generator, submission_model_generator, dataset_path, n_data):
     validation_dataset = Dataset(dataset_path)
-
+    device = golden_model_generator.prefill_model.device
     
     for idx in range(n_data):
         input_batch = dict()
@@ -148,7 +143,7 @@ def perform_generation_to_check_equality(golden_model_generator, submission_mode
 
 
         # Run golden generator
-        output_batch_golden = golden_model_generator.generate(**input_batch, **gen_kwargs, pad_token_id = model_config.eos_token_id)
+        output_batch_golden = golden_model_generator.generate(**input_batch, **gen_kwargs, pad_token_id = golden_model_generator.config.eos_token_id)
 
 
         # Prepare to run submission generator
@@ -181,7 +176,7 @@ def perform_generation_to_check_equality(golden_model_generator, submission_mode
         input_masks_tensor = input_masks_tensor_dict["attention_mask"]
 
         # Run submission generator
-        output_batch = submission_generator.generate(
+        output_batch = submission_model_generator.generate(
             input_ids=input_ids_tensor,
             attention_mask=input_masks_tensor,
             beam_scorer=beam_scorer,
@@ -208,7 +203,7 @@ def compare_model_outputs(args):
                                                         args.gpu,
                                                         args.logit_folder_path,)
 
-    submission_model_generator = get_generator_for_golden_model(args.model_path,
+    submission_model_generator = get_generator_for_submission_model(args.model_path,
                                                         args.quant_config_path, 
                                                         args.submission_quant_param_path, 
                                                         args.submission_quant_format_path, 
