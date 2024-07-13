@@ -12,7 +12,7 @@ from GPTJ_QSL import get_GPTJ_QSL
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["pytorch", "rngd"], default="pytorch", help="Backend")
+        "--backend", choices=["pytorch", "pytorch-rngd", "rngd"], default="pytorch", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                         "Server"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
@@ -46,8 +46,7 @@ def get_args():
     parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
     parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
     parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
-    parser.add_argument("--num_splits", type=int, default=1, help="")
-    parser.add_argument("--split_idx", type=int, default=0, help="")
+    parser.add_argument("--device", help="device to run the model on")
     args = parser.parse_args()
     return args
 
@@ -122,6 +121,20 @@ def main():
             scenario=args.scenario,
             dtype=args.dtype,
             use_gpu=args.gpu,
+            network=args.network,
+            dataset_path=args.dataset_path,
+            max_examples=args.max_examples,
+            qsl=qsl # If args.network is None, then only QSL get passed to the SUT, else it will be None
+        )
+        elif args.backend == "pytorch-rngd":
+            from backend_PyTorch_RNGD import get_SUT
+            
+            sut = get_SUT(
+            model_path=args.model_path,
+            scenario=args.scenario,
+            dtype=args.dtype,
+            use_gpu=args.gpu,
+            device=args.device,
             network=args.network,
             dataset_path=args.dataset_path,
             max_examples=args.max_examples,
