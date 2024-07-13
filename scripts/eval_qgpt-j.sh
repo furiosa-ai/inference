@@ -35,7 +35,7 @@ run_single_device_eval() {
   echo -e "\nEvaluation on device $DEVICE\n"
   
   if [ "$DO_DUMP" = true ]; then
-    DUMP_PATH="$LOG_PATH/dump.json"
+    DUMP_PATH="$LOG_PATH/generator_dump_n$N_COUNT.json"
   else
     DUMP_PATH=""
   fi
@@ -106,6 +106,8 @@ run_multi_device_eval() {
   if [ "$N_DEVICES" == "$N_PARTITIONS" ]; then
     python "$work_dir/gather_log_accuracy.py" --log-dir="$LOG_PATH"
     MLPERF_ACCURACY_FILE="$LOG_PATH/merged_mlperf_log_accuracy.json"
+
+    python "$work_dir/generator_dump_n$N_COUNT.py" --log-dir="$LOG_PATH"
   else
     SKIP_VERIFY_ACCURACY=true
   fi
