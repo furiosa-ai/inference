@@ -132,7 +132,9 @@ class SUT_base(PyTorch_SUT_base):
         self.dataset_path = dataset_path
         self.max_examples = max_examples
         self.scenario = scenario
+        self.device = args.device
         self.qsl = qsl
+
         print("Loading PyTorch model...")
 
         # dtype
@@ -147,18 +149,21 @@ class SUT_base(PyTorch_SUT_base):
             self.amp_enabled = False
             self.amp_dtype = torch.float32
         try:
-            self.model = GPTJForCausalLM.from_pretrained(
-                self.model_path,
-                device_map="auto" if not self.use_gpu else None,
-                low_cpu_mem_usage=True if not self.use_gpu else False,
-                torch_dtype=self.amp_dtype,
-                offload_folder=(
-                    "offload" if not self.use_gpu else None
-                ),  # specify offload folder when using devices with less RAM
-                offload_state_dict=(
-                    True if not self.use_gpu else False
-                ),  # to have some shards of the model to be on the disk
-            )
+            if self.device is not None:
+                self.model = GPTJForCausalLM.from_pretrained(self.model_path).to(self.device)
+            else:
+                self.model = GPTJForCausalLM.from_pretrained(
+                    self.model_path,
+                    device_map="auto" if not self.use_gpu else None,
+                    low_cpu_mem_usage=True if not self.use_gpu else False,
+                    torch_dtype=self.amp_dtype,
+                    offload_folder=(
+                        "offload" if not self.use_gpu else None
+                    ),  # specify offload folder when using devices with less RAM
+                    offload_state_dict=(
+                        True if not self.use_gpu else False
+                    ),  # to have some shards of the model to be on the disk
+                )
         except ValueError as e:
             if "disk_offload" in str(e):
                 print("Offloading the whole model to disk...")
@@ -190,10 +195,10 @@ class SUT_base(PyTorch_SUT_base):
             random_seed()
             set_optimization(args.torch_numeric_optim)
 
-            if not args.gpu:
-                raise ValueError(
-                    "Inference on a device other than GPU is not supported yet."
-                )
+            # if not args.gpu:
+            #     raise ValueError(
+            #         "Inference on a device other than GPU is not supported yet."
+            #     )
             traced_model = self.model.trace_all()
             model= quantize_model(traced_model, qparam_path=args.quant_param_path, qformat_path=args.quant_format_path)
             self.kv_dtype = QUANT_KV_DTYPE
@@ -247,7 +252,7 @@ class SUT_base(PyTorch_SUT_base):
             input_batch = dict()
             input_batch["input_ids"] = input_ids_tensor
             input_batch["attention_mask"] = input_masks_tensor
-
+            
             logits_processor = LOGITS_PROCESSOR(
                 input_ids_tensor.shape[-1], MIN_NEW_TOKENS, EOS_TOKEN_ID
             )
@@ -275,8 +280,8 @@ class SUT_base(PyTorch_SUT_base):
             input_masks_tensor = input_masks_tensor_dict["attention_mask"]
 
             output_batch = self.generator.generate(
-                input_ids=input_ids_tensor,
-                attention_mask=input_masks_tensor,
+                input_ids=input_ids_tensor.to(self.device),
+                attention_mask=input_masks_tensor.to(self.device),
                 beam_scorer=beam_scorer,
                 logits_processor=logits_processor,
                 stopping_criteria=stopping_criteria,
