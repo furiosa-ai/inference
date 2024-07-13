@@ -36,8 +36,6 @@ run_single_device_eval() {
   
   if [ "$DO_DUMP" = true ]; then
     DUMP_PATH="$LOG_PATH/generator_dump_n$N_COUNT.json"
-  else
-    DUMP_PATH=""
   fi
   
   SECONDS=0
@@ -75,9 +73,7 @@ run_multi_device_eval() {
     LOG_PATH_i="$LOG_PATH/$((i + PARTITION_OFFSET))"
 
     if [ "$DO_DUMP" = true ]; then
-      DUMP_PATH="$LOG_PATH_i/dump.json"
-    else
-      DUMP_PATH=""
+      DUMP_PATH="$LOG_PATH_i/generator_dump.json"
     fi
 
     LOG_PATH="$LOG_PATH_i" python "$work_dir/main.py" --scenario="$SCENARIO" \
@@ -174,6 +170,7 @@ QUANT_PARAM_PATH="${QUANT_PARAM_PATH:=$quant_data_dir/calibration_range/quant_pa
 QUANT_FORMAT_PATH="${QUANT_FORMAT_PATH:=$quant_data_dir/calibration_range/quant_format.yaml}"
 
 DO_DUMP="${DO_DUMP:-false}"
+DUMP_PATH=none
 
 # Print evaluation configuration
 print_eval_config
