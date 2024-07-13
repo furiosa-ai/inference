@@ -116,9 +116,9 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in
     --n_count) N_COUNT="$2"; shift ;;
     --n_devices) N_DEVICES="$2"; shift ;;
-    --n_partitions) N_PARTITIONS="$2"; shift ;;
-    --partition_offset) PARTITION_OFFSET="$2"; shift ;;
-    --do_dump) DO_DUMP="$2"; shift ;;
+    --n_parts) N_PARTITIONS="$2"; shift ;;
+    --offset) PARTITION_OFFSET="$2"; shift ;;
+    --dump) DO_DUMP="$2"; shift ;;
     *) echo "Unknown parameter passed: $1"; exit 1 ;;
   esac
   shift
