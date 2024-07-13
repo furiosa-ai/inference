@@ -2,7 +2,7 @@ import argparse
 import array
 import os
 from typing import Dict, List, Tuple
-
+import json
 import mlperf_loadgen as lg
 import torch
 from accelerate import disk_offload
@@ -134,6 +134,11 @@ class SUT_base(PyTorch_SUT_base):
         self.scenario = scenario
         self.device = args.device
         self.qsl = qsl
+        self.dump_path = args.dump_path
+        if not self.dump_path.exists():
+            with open(self.dump_path, "w") as f:
+                json.dump([], f)
+        self.dump = {}
 
         print("Loading PyTorch model...")
 
@@ -233,6 +238,41 @@ class SUT_base(PyTorch_SUT_base):
         # construct SUT
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
 
+    def issue_queries(self, query_samples):
+        print("Number of Samples in query_samples : ", len(query_samples))
+
+        total_samples_done = 0
+        list_prompts_tokens = []
+        list_prompts_attn_masks = []
+
+        # Pass each query to inference_call function
+        # Activates only when scenario is Offline and network mode is None
+        for i in tqdm(range(len(query_samples))):
+            index = query_samples[i].index
+            input_ids_tensor = self.qsl.data_object.source_encoded_input_ids[index]
+            input_masks_tensor = self.qsl.data_object.source_encoded_attn_masks[index]
+            text = self.qsl.data_object.sources[index]
+            query = {
+                "input_text": text,
+                "input_ids_tensor": input_ids_tensor.tolist(),
+                "input_masks_tensor": input_masks_tensor.tolist()
+            }
+            
+            if self.dump_path:
+                self.dump.update({"qsl_idx": index})
+                self.dump.update({"input": query})
+                
+            self.inference_call(query, query_samples[i].id)
+            
+            if self.dump_path:
+                with open(self.dump_path, "r") as f:
+                    data = json.load(f)
+                
+                data.append(self.dump)
+                
+                with open(self.dump_path, "w") as f:
+                    json.dump(data, f)
+
     def inference_call(self, query, query_id=None):
         """Common for all scenarios"""
         torch_device_type = "cuda" if self.use_gpu else "cpu"
@@ -316,7 +356,11 @@ class SUT_base(PyTorch_SUT_base):
                 for output in pred_output_batch
             ]
             response_text = decoded_outputs[0]
-
+            if self.dump_path:
+                self.dump.update({"output": {
+                    "pred_output_batch": pred_output_batch.tolist(),
+                    "response_text": response_text,
+                }})
             # Loadgen monitors the response in GPT_QDL
             if self.network == "sut":
                 return {

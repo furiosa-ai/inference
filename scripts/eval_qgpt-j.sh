@@ -25,11 +25,21 @@ print_eval_config() {
     printf "\tNUM_PARTITIONS: $N_PARTITIONS\n"
     printf "\tPARTITION_OFFSET: $PARTITION_OFFSET\n"
   fi
+  if [ "$DO_DUMP" = true ]; then
+    printf "\tDO_DUMP: true\n"
+  fi
 }
 
 # Function to run evaluation on a single device
 run_single_device_eval() {
   echo -e "\nEvaluation on device $DEVICE\n"
+  
+  if [ "$DO_DUMP" = true ]; then
+    DUMP_PATH="$LOG_PATH/dump.json"
+  else
+    DUMP_PATH=""
+  fi
+  
   SECONDS=0
   LOG_PATH="$LOG_PATH" python "$work_dir/main.py" --scenario="$SCENARIO" \
                                                   --backend="$BACKEND" \
@@ -39,9 +49,9 @@ run_single_device_eval() {
                                                   --max_examples="$N_COUNT" \
                                                   --gpu \
                                                   --quantize \
-                                                  --quant_param_path=$QUANT_PARAM_PATH \
-                                                  --quant_format_path=$QUANT_FORMAT_PATH \
-                                                  --max_examples=$N_COUNT \
+                                                  --quant_param_path="$QUANT_PARAM_PATH" \
+                                                  --quant_format_path="$QUANT_FORMAT_PATH" \
+                                                  --dump_path="$DUMP_PATH" \
                                                   --accuracy
   duration=$SECONDS
   printf "$((duration / 60)) minutes and $((duration % 60)) seconds elapsed." > "$LOG_PATH/elapsed_time.log"
@@ -64,6 +74,12 @@ run_multi_device_eval() {
     DATASET_PATH_i="$SPLIT_DATASET_DIR/split_$((i + PARTITION_OFFSET)).json"
     LOG_PATH_i="$LOG_PATH/$((i + PARTITION_OFFSET))"
 
+    if [ "$DO_DUMP" = true ]; then
+      DUMP_PATH="$LOG_PATH_i/dump.json"
+    else
+      DUMP_PATH=""
+    fi
+
     LOG_PATH="$LOG_PATH_i" python "$work_dir/main.py" --scenario="$SCENARIO" \
                                                       --backend="$BACKEND" \
                                                       --mlperf_conf="$MLPERF_CONF" \
@@ -71,11 +87,12 @@ run_multi_device_eval() {
                                                       --dataset-path="$DATASET_PATH_i" \
                                                       --device="$DEVICE:$i" \
                                                       --quantize \
-                                                      --quant_param_path=$QUANT_PARAM_PATH \
-                                                      --quant_format_path=$QUANT_FORMAT_PATH \
+                                                      --quant_param_path="$QUANT_PARAM_PATH" \
+                                                      --quant_format_path="$QUANT_FORMAT_PATH" \
+                                                      --dump_path="$DUMP_PATH" \
                                                       --accuracy &
-
   done
+
   # Wait for all background processes to finish    
   wait
   
@@ -86,7 +103,7 @@ run_multi_device_eval() {
   # Gather log accuracy to a single file
   # If the number of devices is equal to the number of partitions, then gather log accuracy
   # Otherwise, skip the verification of accuracy since the log files are not complete
-  if [ $N_DEVICES == $N_PARTITIONS ]; then
+  if [ "$N_DEVICES" == "$N_PARTITIONS" ]; then
     python "$work_dir/gather_log_accuracy.py" --log-dir="$LOG_PATH"
     MLPERF_ACCURACY_FILE="$LOG_PATH/merged_mlperf_log_accuracy.json"
   else
@@ -101,6 +118,7 @@ while [[ "$#" -gt 0 ]]; do
     --n_devices) N_DEVICES="$2"; shift ;;
     --n_partitions) N_PARTITIONS="$2"; shift ;;
     --partition_offset) PARTITION_OFFSET="$2"; shift ;;
+    --do_dump) DO_DUMP="$2"; shift ;;
     *) echo "Unknown parameter passed: $1"; exit 1 ;;
   esac
   shift
@@ -133,7 +151,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-
 # Evaluate model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO="Offline"
@@ -154,6 +171,8 @@ QUANT_CONFIG_PATH="${QUANT_CONFIG_PATH:=$quant_data_dir/quant_config.yaml}"
 QUANT_PARAM_PATH="${QUANT_PARAM_PATH:=$quant_data_dir/calibration_range/quant_param.npy}"
 QUANT_FORMAT_PATH="${QUANT_FORMAT_PATH:=$quant_data_dir/calibration_range/quant_format.yaml}"
 
+DO_DUMP="${DO_DUMP:-false}"
+
 # Print evaluation configuration
 print_eval_config
 
@@ -168,10 +187,10 @@ fi
 if $SKIP_VERIFY_ACCURACY; then
   echo -e "Skipping accuracy evaluation."
 else
-    python "$work_dir/evaluation.py" --mlperf-accuracy-file="$MLPERF_ACCURACY_FILE" \
-                                 --dataset-file="$DATASET_PATH" &> "$LOG_PATH/accuracy_result.log"
-    cat "$LOG_PATH/accuracy_result.log"
-    echo -e "Save eval log to $LOG_PATH"
+  python "$work_dir/evaluation.py" --mlperf-accuracy-file="$MLPERF_ACCURACY_FILE" \
+                                   --dataset-file="$DATASET_PATH" &> "$LOG_PATH/accuracy_result.log"
+  cat "$LOG_PATH/accuracy_result.log"
+  echo -e "Save eval log to $LOG_PATH"
 fi
 
 echo -e "\n============= End of eval =============\n"
