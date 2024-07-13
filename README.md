@@ -16,6 +16,60 @@ apt-get update && apt-get install build-essential -y
 DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2.0-0 -y
 ```
 
+## NPU E2E Test for MLPerf v4.1 Submission
+
+### GPT-J
+
+```sh
+# Skip this step if the environment is already set up.
+. scripts/build_gpt-j_env.sh  
+
+# This will evaluate GPT-J full dataset on single GPU by default.
+. scripts/eval_gpt-j.sh
+```
+- Parameters
+    * `n_count`: Number of evaluation examples to process. (range: `[1, 13368]`)
+    * `n_devices`: Number of devices (e.g., GPUs) to use for evaluation. It cannot exceed the actual number of devices on a machine. (default: `1`)
+    * `n_partitions`: Number of partitions to split the dataset into. (default: `n_devices`)
+    * `partition_offset`: Offset for selecting the partition number. (default: `0`)
+
+#### Example usages:
+
+- Sinlge Machine with 2 GPUs and 1,000 Samples:
+
+    ```sh
+    . scripts/eval_gpt-j.sh --n_count 1000 --n_devices 2 --n_partitions 2
+     ```
+
+- Multi-Node Setup with 2 GPUs per Node (Total 4 GPUs) and Full Samples:
+
+    on Node 1
+    
+    ```sh
+    . scripts/eval_gpt-j.sh --n_devices 2 --n_partitions 4 --partition_offset 0
+    ```
+    
+    on Node 2
+    
+    ```sh
+    . scripts/eval_gpt-j.sh --n_devices 2 --n_partitions 4 --partition_offset 2
+    ```
+
+    Finally, gather the partitioned mlperf_log_accuracy.json files from `LOG_PATH/0`, `LOG_PATH/1`, ..., `LOG_PATH/3` and run the following commands, setting LOG_PATH:
+    ```sh
+    # Specify LOG_PATH
+    LOG_PATH=...
+    DATASET_PATH="data/dataset/cnn-daily-mail/validation/cnn_eval.json"
+
+    conda activate mlperf-gpt-j
+    python "language/gpt-j/gather_log_accuracy.py" --log-dir="$LOG_PATH"
+    MLPERF_ACCURACY_FILE="$LOG_PATH/merged_mlperf_log_accuracy.json"
+    python "language/gpt-j/evaluation.py" --mlperf-accuracy-file="$MLPERF_ACCURACY_FILE" \
+                                        --dataset-file="$DATASET_PATH" &> "$LOG_PATH/accuracy_result.log"
+    
+    cat $LOG_PATH/accuracy_result.log
+    conda deactivate
+    ```
 
 ## Submission Model
 
