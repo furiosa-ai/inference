@@ -30,7 +30,7 @@ N_COUNT=${N_COUNT:="13368"} # total_len=13,368
 
 # quantization args
 export CALIBRATE=true
-export N_CALIB=20
+export N_CALIB=10
 
 CALIB_DATA_PATH=$data_dir/dataset/cnn-daily-mail/calibration/cnn_dailymail_calibration.json
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
@@ -64,7 +64,7 @@ else
 fi
 
 
-N_DATA=${N_DATA:=2} 
+export N_DATA=2
 GOLDEN_QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param_golden.npy
 GOLDEN_QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format_golden.yaml
 LOGIT_FOLDER_PATH=ci_file/logit_files
