@@ -83,11 +83,6 @@ python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
                                                 --gpu
 
 
-# printf "\n============= STEP-2: Check the equivalence of quantiation parameters =============\n"
-
-# python ci_utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_PARAM_PATH \
-#                                     --created_quant_param_path=$QUANT_PARAM_PATH\
-
                                             
 
 
