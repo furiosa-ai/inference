@@ -8,7 +8,7 @@ work_dir=$git_dir/$model_dir
 data_dir=$git_dir/data
 quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
-env_name=mlperf-$model_name
+env_name=mlperf-$model_name-sunghyuck
 conda_base=$($CONDA_EXE info --base)
 
 # work on model directory
@@ -63,8 +63,13 @@ else
 fi
 
 
-RELEASED_PARAM_PATH=$work_dir/ci_file/released_qparam/qparam.npy
-printf "\n============= STEP-2: Check the equivalence of quantiation parameters =============\n"
+printf "\n============= STEP-2: Pull dvc data =============\n"
+pip install dvc[s3]
+dvc pull $data_dir/quantization/gpt-j --force
+RELEASED_PARAM_PATH=$data_dir/quantization/gpt-j/calibration_range/quant_param.npy
+
+
+printf "\n============= STEP-3: Check the equivalence of quantiation parameters =============\n"
 
 python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_PARAM_PATH \
                                     --created_quant_param_path=$QUANT_PARAM_PATH\
