@@ -8,7 +8,7 @@ work_dir=$git_dir/$model_dir
 data_dir=$git_dir/data
 quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
-env_name=mlperf-$model_name
+env_name=mlperf-$model_name-sunghyuck
 conda_base=$($CONDA_EXE info --base)
 
 # work on model directory
@@ -65,7 +65,7 @@ fi
 
 printf "\n============= STEP-2: Pull dvc data =============\n"
 pip install dvc[s3]
-dvc pull $data_dir/quantization/gpt-j --force
+dvc pull --force $data_dir/quantization/gpt-j.dvc
 RELEASED_PARAM_PATH=$data_dir/quantization/gpt-j/calibration_range/quant_param.npy
 
 
