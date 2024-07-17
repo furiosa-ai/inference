@@ -66,12 +66,12 @@ fi
 printf "\n============= STEP-2: Pull dvc data =============\n"
 pip install dvc[s3]
 dvc pull --force $data_dir/quantization/gpt-j.dvc
-RELEASED_QUANT_PARAM_PATH=$data_dir/quantization/gpt-j/calibration_range/quant_param.npy
+RELEASED_PARAM_PATH=$data_dir/quantization/gpt-j/calibration_range/quant_param.npy
 
 
 printf "\n============= STEP-3: Check the equivalence of quantiation parameters =============\n"
 
-python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_QUANT_PARAM_PATH \
+python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_PARAM_PATH \
                                     --created_quant_param_path=$QUANT_PARAM_PATH\
 
                                             
