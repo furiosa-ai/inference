@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # define env. variables
 model_name=qllama2-70b
 model_dir=language/llama2-70b
@@ -19,7 +18,6 @@ source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
 
 # eval model
-printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:="Offline"}
 BACKEND="rngd"
 DATA_TYPE=${DATA_TYPE:="float32"}
@@ -30,8 +28,10 @@ if [ $DEVICE = "cpu" ];
     then DATA_TYPE=float32;
 fi
 # quantization args
-CALIBRATE=${CALIBRATE:=false}
-N_CALIB=${N_CALIB:=1000} # total_len=1,000
+export CALIBRATE=true
+export N_CALIB=10
+export N_DATA=2
+
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
@@ -39,7 +39,7 @@ QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
-printf "\tNUM_EVAL_DATA: $N_COUNT\n"
+printf "\tNUM_EVAL_DATA: $N_DATA\n"
 printf "\tCALIBRATE: $CALIBRATE\n"
 printf "\tDEVICE: $DEVICE\n"
 
@@ -52,52 +52,54 @@ export LOG_PATH
 mkdir -p $LOG_PATH/calibration_range
 
 if [ "$CALIBRATE" = true ]; then
-    printf "\t\tNUM_CALIB_DATA: $N_CALIB\n"
-    python -m quantization.calibrate --backend=pytorch \
-                                     --model_path=$CHECKPOINT_PATH \
+    printf "\tNUM_CALIB_DATA: $N_CALIB\n"
+    python -m quantization.calibrate --model_path=$CHECKPOINT_PATH \
                                      --quant_config_path=$QUANT_CONFIG_PATH \
                                      --quant_param_path=$QUANT_PARAM_PATH \
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
-                                     --model_source $MODEL_SOURCE \
-                                     --gpu=True\
+                                     --gpu
 
 fi
 
-SECONDS=0
-python -u main.py --scenario $SCENARIO \
-                  --backend $BACKEND \
-                  --model-path $CHECKPOINT_PATH \
-                  --mlperf-conf ../../mlperf.conf \
-                  --total-sample-count $N_COUNT \
-                  --device $DEVICE \
-                  --dataset-path $DATASET_PATH \
-                  --dtype $DATA_TYPE \
-                  --accuracy \
-                  --output-log-dir $LOG_PATH \
-                  --quantize \
-                  --quant_config_path $QUANT_CONFIG_PATH \
-                  --quant_param_path $QUANT_PARAM_PATH \
-                  --quant_format_path $QUANT_FORMAT_PATH
 
-duration=$SECONDS
-printf "$((duration / 60)) minutes and $((duration % 60)) seconds elapsed." &> $LOG_PATH/elapsed_time.log
 
-ACCURACY_LOG_FILE=$LOG_PATH/mlperf_log_accuracy.json
-python evaluate-accuracy.py --checkpoint-path $CHECKPOINT_PATH \
-                            --mlperf-accuracy-file $ACCURACY_LOG_FILE \
-                            --dataset-file $DATASET_PATH --dtype int64 \
-                            &> $LOG_PATH/accuracy_result.log
-printf "Save eval log to $LOG_PATH"
+GOLDEN_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_golden.npy
+GOLDEN_QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format_golden.yaml
+LOGIT_FOLDER_PATH=ci_file/logit_files
+OUTPUT_FOLDER_PATH=ci_file/output_files
+mkdir -p $LOGIT_FOLDER_PATH
+mkdir -p $OUTPUT_FOLDER_PATH
 
-printf "\n============= End of eval =============\n"
+printf "\n============= STEP-2: Check the equivalence of outputs obtained at each generation step =============\n"
+
+python -m ci_file.qllama2_70b_forward_test  --model_path=$CHECKPOINT_PATH \
+                                            --quant_config_path=$QUANT_CONFIG_PATH \
+                                            --golden_quant_param_path=$GOLDEN_QUANT_PARAM_PATH \
+                                            --golden_quant_format_path=$GOLDEN_QUANT_FORMAT_PATH \
+                                            --submission_quant_format_path=$QUANT_FORMAT_PATH \
+                                            --submission_quant_param_path=$QUANT_PARAM_PATH \
+                                            --n_data=$N_DATA \
+                                            --dataset_path=$DATASET_PATH \
+                                            --logit_folder_path=$LOGIT_FOLDER_PATH \
+                                            --gpu \
+                                            --mcp_dumping_on \
+                                            --generation_result_folder_path=$OUTPUT_FOLDER_PATH
+                                            
+
+
+printf "\n============= End of Forward Test for Qllama2-70b =============\n"
 
 # unset exported env. variables
 unset SCENARIO
 unset DATA_TYPE
 unset N_COUNT
 unset DEVICE
+unset LOG_PATH
+unset CALIBRATE
+unset N_CALIB
+unset N_DATA
 
 # exit from conda env.
 conda deactivate
