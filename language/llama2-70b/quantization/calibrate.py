@@ -52,7 +52,6 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
     print("Loaded model")
 
     model.eval()
-    import pdb; pdb.set_trace()
     model = model.to(memory_format=torch.channels_last)
     
     if hasattr(model, 'hf_device_map'):
@@ -123,7 +122,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         autoscale_calib_kwargs=autoscale_calib_kwargs,
     )
 
-    
+
     model_compressor.save(
         model,
         qformat_out_path=qformat_path,
