@@ -6,7 +6,8 @@ import yaml
 from torch.utils.data import DataLoader
 from torch.nn.functional import pad
 import model_compressor
-from utils import get_kwargs, random_seed, set_optimization 
+from quantization.utils import get_kwargs, random_seed, set_optimization 
+import gc
 
 # Assume BLOCK_SIZE, NUM_BLOCKS, BUCKET_SIZE are fixed for now.
 BLOCK_SIZE = 1
@@ -14,7 +15,7 @@ BLOCK_SIZE = 1
 BUCKET_SIZE = 2048
 
 
-def load_model(model_source, model_path, use_gpu, n_layers):
+def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
     if use_gpu:
         assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
     amp_dtype = torch.float32
@@ -35,6 +36,11 @@ def load_model(model_source, model_path, use_gpu, n_layers):
             model_path, 
             config=config_exp
         )
+        if use_gpu:
+            print(f"Casting models to GPU...")
+            assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
+            device = torch.device("cuda:0")
+            model.to(device)
     else:
         model = LlamaForCausalLM.from_pretrained(
                 model_path,
@@ -46,14 +52,18 @@ def load_model(model_source, model_path, use_gpu, n_layers):
     print("Loaded model")
 
     model.eval()
-
+    import pdb; pdb.set_trace()
     model = model.to(memory_format=torch.channels_last)
+    
+    if hasattr(model, 'hf_device_map'):
+            model.device_map = model.hf_device_map
+            model.module_name =  model.__class__.__module__ + "." + model.__class__.__name__
     
     return model
 
 
 
-def make_calib_dataloader(model, model_source, data_path, batch_size, n_calib, max_seq_len=1024,):
+def make_calib_dataloader(model, data_path, batch_size, n_calib,):
     if not os.path.isfile(data_path):
         print("Calibration dataset {} not found. Please check that the path is correct".format(data_path))
     
@@ -113,15 +123,9 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         autoscale_calib_kwargs=autoscale_calib_kwargs,
     )
 
-    # model_compressor.save(
-    #     model,
-    #     qformat_out_path=qformat_path,
-    #     qparam_out_path=qparam_path,
-    #     **get_kwargs(model_compressor.save, qconfig),
-    # )
-
+    
     model_compressor.save(
-        model_for_calib,
+        model,
         qformat_out_path=qformat_path,
         qparam_out_path=qparam_path,
         weight_calib_method=qconfig["weight_calib_method"],
@@ -136,7 +140,10 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         disable_inout=(True, False),
         )
 
-    del model 
+    model.cpu()
+    del model
+    gc.collect()
+    torch.cuda.empty_cache() 
 
     return
 
@@ -183,15 +190,7 @@ def get_args():
     )
     parser.add_argument("--calib_data_path", help="path to calibration data")
     parser.add_argument(
-        "--torch_numeric_optim",
-        action="store_true",
-        help="use Pytorch numerical optimizaiton for CUDA/cudnn",
-    )
-    parser.add_argument(
-        "--gpu", 
-        type=bool, 
-        default=True,
-        help="use GPU instead of CPU for the inference"
+        "--gpu", action="store_true", help="use GPU instead of CPU for the inference"
     )
     parser.add_argument(
         "--n_layers", 
@@ -215,35 +214,51 @@ def get_args():
 def main():
     args = get_args()
 
-    if args.backend == "pytorch":
-        if not args.gpu:
-            raise ValueError(
-                "Inference on a device other than GPU is not suppurted yet."
-            )
-        model = load_pytorch_model(args.model_source, args.model_path, args.gpu, args.n_layers)
-        if hasattr(model, 'hf_device_map'):
-            model.device_map = model.hf_device_map
-            model.module_name =  model.__class__.__module__ + "." + model.__class__.__name__
 
-    else:
-        raise ValueError("Unsupported backend: {:}".format(args.backend))
+    golden_model = load_pytorch_model(
+                            model_source = 'furiosa_llm_rope', 
+                            model_path = args.model_path, 
+                            use_gpu = args.gpu, 
+                            n_layers = args.n_layers
+                            )
+    
 
     random_seed()
-    set_optimization(args.torch_numeric_optim)
+    set_optimization(False)
 
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
-    dataloader = make_calib_dataloader(
-        model, args.model_source, args.calib_data_path, qconfig["calib_batch_size"], args.n_calib, use_generator_dataloader_with_unpacked_model=args.use_generator_dataloader_with_unpacked_model
-    )
+
+
+    dataloader = make_calib_dataloader(golden_model, args.calib_data_path, qconfig["calib_batch_size"], args.n_calib,)
+
+
+    golden_quant_param_path = args.quant_param_path.replace('.npy', '_golden.npy')
+    golden_quant_format_path = args.quant_format_path.replace('.yaml', '_golden.yaml')
+
     calibrate(
-        model,
-        args.model_source,
+        golden_model,
         qconfig,
-        args.quant_param_path,
-        args.quant_format_path,
+        golden_quant_param_path,
+        golden_quant_format_path,
         dataloader,
     )
+
+    golden_model.cpu()
+    del golden_model
+    gc.collect()
+    torch.cuda.empty_cache() 
+
+    submission_model = load_pytorch_model(
+                        model_source = 'mlperf_submission', 
+                        model_path = args.model_path, 
+                        use_gpu = args.gpu, 
+                        n_layers = args.n_layers
+                        )
+
+
+
+    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig)  
 
 
 if __name__ == "__main__":

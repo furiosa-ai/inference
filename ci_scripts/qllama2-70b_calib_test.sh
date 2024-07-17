@@ -10,6 +10,10 @@ quant_data_dir=$data_dir/quantization/llama2-70b
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
+quant_data_dir=$data_dir/quantization/llama2-70b
+tag=MLPerf4.1-v3.13
+quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission/W8A8KV8/80L
+
 
 # work on model directory
 cd $work_dir
@@ -19,7 +23,6 @@ source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
 
 # eval model
-printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:="Offline"}
 BACKEND="rngd"
 DATA_TYPE=${DATA_TYPE:="float32"}
@@ -34,6 +37,7 @@ export CALIBRATE=true
 #N_CALIB=${N_CALIB:=1000} # total_len=1,000
 
 export N_CALIB=4 #test code
+# export N_LAYERS=2
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
@@ -44,6 +48,8 @@ printf "\tSCENARIO: $SCENARIO\n"
 printf "\tNUM_EVAL_DATA: $N_COUNT\n"
 printf "\tCALIBRATE: $CALIBRATE\n"
 printf "\tDEVICE: $DEVICE\n"
+printf "\tNUM_CALIB_DATA: $N_CALIB\n"
+
 
 CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
@@ -53,28 +59,41 @@ export LOG_PATH
 
 mkdir -p $LOG_PATH/calibration_range
 
+printf "\n============= STEP-1: Pull dvc data =============\n"
+cd $git_dir/furiosa-llm-models-artifacts
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
+
+RELEASED_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_from_dvc.npy
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $RELEASED_QUANT_PARAM_PATH
+
+printf "\n TEST CODE\n==="
+cd $work_dir
+RELEASED_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_golden_inf_comp.npy
+QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_golden.npy
+printf "Comparing the two quant param files at $RELEASED_QUANT_PARAM_PATH and $QUANT_PARAM_PATH\n"
+python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_QUANT_PARAM_PATH \
+                                    --created_quant_param_path=$QUANT_PARAM_PATH\
+
+
+printf "\n============= STEP-1: Run calibration =============\n"
+# work on model directory
+cd $work_dir
 if [ "$CALIBRATE" = true ]; then
-    printf "\t\tNUM_CALIB_DATA: $N_CALIB\n"
-    python -m quantization.calibrate --backend=pytorch \
-                                     --model_path=$CHECKPOINT_PATH \
+    python -m quantization.calibrate --model_path=$CHECKPOINT_PATH \
                                      --quant_config_path=$QUANT_CONFIG_PATH \
                                      --quant_param_path=$QUANT_PARAM_PATH \
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
-                                     --model_source $MODEL_SOURCE \
-                                     --gpu=True\
+                                     --gpu 
 
 fi
 
-printf "\n============= STEP-2: Pull dvc data =============\n"
-pip install dvc[s3]
-dvc pull $data_dir/quantization/llama2-70b.dvc --force
-RELEASED_QUANT_PARAM_PATH=$data_dir/quantization/llama2-70b/calibration_range/quant_param.npy
+
 
 
 printf "\n============= STEP-3: Check the equivalence of quantiation parameters =============\n"
-
+printf "Comparing the two quant param files at $RELEASED_QUANT_PARAM_PATH and $QUANT_PARAM_PATH\n"
 python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_QUANT_PARAM_PATH \
                                     --created_quant_param_path=$QUANT_PARAM_PATH\
 
@@ -83,6 +102,12 @@ unset SCENARIO
 unset DATA_TYPE
 unset N_COUNT
 unset DEVICE
+unset CALIBRATE
+unset N_CALIB
+unset LOG_PATH
+
+
+
 
 # exit from conda env.
 conda deactivate
