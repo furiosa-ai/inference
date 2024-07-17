@@ -34,10 +34,9 @@ if [ $DEVICE = "cpu" ];
 fi
 # quantization args
 export CALIBRATE=true
-#N_CALIB=${N_CALIB:=1000} # total_len=1,000
+N_CALIB=${N_CALIB:=1000} # total_len=1,000
 
-export N_CALIB=4 #test code
-# export N_LAYERS=2
+
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
@@ -60,19 +59,21 @@ export LOG_PATH
 mkdir -p $LOG_PATH/calibration_range
 
 printf "\n============= STEP-1: Pull dvc data =============\n"
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
+git checkout $tag
+
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
 dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
+mkdir -p $quant_data_dir/calibration_range
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param_from_dvc.npy
+rm -rf $git_dir/furiosa-llm-models-artifacts
 
 RELEASED_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_from_dvc.npy
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $RELEASED_QUANT_PARAM_PATH
-
-printf "\n TEST CODE\n==="
-cd $work_dir
-RELEASED_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_golden_inf_comp.npy
-QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_golden.npy
-printf "Comparing the two quant param files at $RELEASED_QUANT_PARAM_PATH and $QUANT_PARAM_PATH\n"
-python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_QUANT_PARAM_PATH \
-                                    --created_quant_param_path=$QUANT_PARAM_PATH\
 
 
 printf "\n============= STEP-1: Run calibration =============\n"
@@ -98,13 +99,11 @@ python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RE
                                     --created_quant_param_path=$QUANT_PARAM_PATH\
 
 # unset exported env. variables
-unset SCENARIO
-unset DATA_TYPE
-unset N_COUNT
-unset DEVICE
+
 unset CALIBRATE
-unset N_CALIB
 unset LOG_PATH
+
+
 
 
 

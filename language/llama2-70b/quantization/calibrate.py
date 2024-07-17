@@ -122,7 +122,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         autoscale_calib_kwargs=autoscale_calib_kwargs,
     )
 
-
+    
     model_compressor.save(
         model,
         qformat_out_path=qformat_path,
@@ -228,10 +228,9 @@ def main():
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
 
-
     dataloader = make_calib_dataloader(golden_model, args.calib_data_path, qconfig["calib_batch_size"], args.n_calib,)
 
-
+    
     golden_quant_param_path = args.quant_param_path.replace('.npy', '_golden.npy')
     golden_quant_format_path = args.quant_format_path.replace('.yaml', '_golden.yaml')
 
