@@ -51,6 +51,7 @@ dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dv
 mkdir -p $quant_data_dir/calibration_range
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+rm -rf $git_dir/furiosa-llm-models-artifacts
 
 printf "\n============= End of build =============\n"
 
