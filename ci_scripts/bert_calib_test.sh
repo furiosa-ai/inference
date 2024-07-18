@@ -29,7 +29,6 @@ DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=${N_COUNT:="10833"} # total_len = 10,833
 
-export CALIBRATE=true
 # quantization args
 CALIBRATE=${CALIBRATE:=false}
 N_CALIB=${N_CALIB:=100} # total_len = 100
