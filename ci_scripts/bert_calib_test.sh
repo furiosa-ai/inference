@@ -65,7 +65,8 @@ python -m quantization.calibrate --model_type=$MODEL_TYPE \
                                     --quant_format_path=$QUANT_FORMAT_PATH \
                                     --calib_data_path=$CALIB_DATA_PATH \
                                     --n_calib=$N_CALIB \
-                                    --gpu
+                                    --gpu \
+                                    --save_cache_files
 printf "Save calibration range to $LOG_PATH/calibration_range"
 cd $work_dir
 
@@ -91,6 +92,8 @@ rm -rf $git_dir/furiosa-llm-models-artifacts
 printf "\n============= STEP-3: Check the equivalence of quantiation parameters =============\n"
 
 cd $work_dir
+
+RELEASED_PARAM_PATH=$data_dir/quantization/gpt-j/calibration_range/quant_param.npy
 python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RELEASED_PARAM_PATH \
                                     --created_quant_param_path=$QUANT_PARAM_PATH\
 
