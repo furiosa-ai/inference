@@ -11,6 +11,7 @@ from transformers import BertConfig, BertForQuestionAnswering
 import model_compressor  # isort:skip
 
 from .utils import get_kwargs, random_seed, set_optimization  # isort:skip
+from quantization.quantize import quantize_model
 
 PADDING_SIZE = 384
 BUCKET_SIZE = 384
@@ -111,22 +112,23 @@ def cal_data_loader(data_path, batch_size, n_calib, model_type, is_equivalence_c
 
 def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader, save_cache_files):
     model.config.use_cache = False
+    model_for_calib = model.trace()
 
-    model = model_compressor.create_quantsim_model(
-        model,
+    model_for_calib = model_compressor.create_quantsim_model(
+        model_for_calib,
         dataloader=calib_dataloader,
         disable_inout=(True, True),
         **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 
     model_compressor.calibrate(
-        model,
+        model_for_calib,
         calib_dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
     )
 
     model_compressor.save(
-        model,
+        model_for_calib,
         qformat_out_path=qformat_path,
         qparam_out_path=qparam_path,
         weight_calib_method=qconfig["weight_calib_method"],
@@ -142,11 +144,14 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
     )
 
     if save_cache_files:
+        traced_model = model.trace()
+        quant_model = quantize_model(traced_model, qparam_path, qformat_path,)
+
         qlv4_prefill_out_path = qparam_path.replace("quant_param.npy", "bert.bin")
         rblock_json_out_path = qparam_path.replace("quant_param.npy", "graph_patterns.json")
-        torch.save(model.state_dict(), qlv4_prefill_out_path)
+        torch.save(quant_model.state_dict(), qlv4_prefill_out_path)
         
-        model_compressor.save_graph_patterns(model, rblock_json_out_path)
+        model_compressor.save_graph_patterns(quant_model, rblock_json_out_path)
 
 
     return
@@ -204,7 +209,6 @@ def main():
                 "Calibration on a device other than GPU is not supported yet."
             )
         model = load_pytorch_model(args.model_path, args.model_config_path, args.gpu)
-        model = model.trace()
 
     elif args.model_type == "mlperf-submission":
         if not args.gpu:
@@ -213,7 +217,6 @@ def main():
             )
         
         model = load_mlperf_submission_model(args.model_path, args.model_config_path, args.gpu)
-        model = model.trace()
 
     else:
         raise ValueError("Unsupported backend: {:}".format(args.model_type))
