@@ -101,6 +101,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
     else:
         autoscale_calib_kwargs = None
 
+    model_type = type(model)
     model, _,_ = model_compressor.helper.llama_custom_symbolic_trace(
         model,
         input_names=["input_ids", "attention_mask", "position_ids"], 
@@ -119,6 +120,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         model,
         calib_dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
+        model_type = model_type,
         autoscale_calib_kwargs=autoscale_calib_kwargs,
     )
 
@@ -212,8 +214,7 @@ def get_args():
 
 def main():
     args = get_args()
-        
-
+    
     golden_model = load_pytorch_model(
                             model_source = 'furiosa_llm_rope', 
                             model_path = args.model_path, 
