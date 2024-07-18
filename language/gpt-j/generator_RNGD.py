@@ -253,11 +253,6 @@ class MLPerfSubmissionBeamSearch:
             outputs = self.model(**forward_kwargs)
             logits = handle_outputs(outputs)
 
-            if logits.dim() == 3:
-                print(logits[:, -1, :])
-            else:
-                print(logits)
-
             # if is_prefill:
             #     next_token_logits = self.find_next_tokens(
             #         logits, logit_target_locations, is_prefill
@@ -277,7 +272,6 @@ class MLPerfSubmissionBeamSearch:
                 # next_token_scores = torch.nn.functional.log_softmax(
                 #     next_token_logits, dim=-1
                 # )  # [batch_size * num_beams, vocab_size]
-                print(next_token_scores)
             else:
                 # For decode, we will use the logits as scores as model outputs
                 # torch.nn.functional.log_softmax(lm_logits[:, -1], dim=-1)
@@ -363,7 +357,6 @@ class MLPerfSubmissionBeamSearch:
             max_length=max_length,
             beam_indices=beam_indices,
         )
-        print(sequence_outputs['sequences'][0, -20:])
 
         # reset must be called for paged attention to call generate again
         self.reset()
