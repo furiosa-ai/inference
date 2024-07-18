@@ -59,6 +59,8 @@ export LOG_PATH
 mkdir -p $LOG_PATH/calibration_range
 
 printf "\n============= STEP-1: Pull dvc data =============\n"
+pip install dvc[s3]
+dvc pull $data_dir/quantization/llama2-70b.dvc --force
 cd $git_dir
 git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
@@ -66,19 +68,19 @@ git checkout $tag
 
 dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
 dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
+
 mkdir -p $quant_data_dir/calibration_range
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+
 
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param_from_dvc.npy
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant_data_dir/calibration_range/quant_format_from_dvc.yaml
 rm -rf $git_dir/furiosa-llm-models-artifacts
 
 RELEASED_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_from_dvc.npy
 
 
 printf "\n============= STEP-1: Run calibration =============\n"
-# work on model directory
-cd $work_dir
+cd $work_dir    
 if [ "$CALIBRATE" = true ]; then
     python -m quantization.calibrate --model_path=$CHECKPOINT_PATH \
                                      --quant_config_path=$QUANT_CONFIG_PATH \
@@ -86,10 +88,9 @@ if [ "$CALIBRATE" = true ]; then
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
-                                     --gpu 
+                                     --gpu
 
 fi
-
 
 
 

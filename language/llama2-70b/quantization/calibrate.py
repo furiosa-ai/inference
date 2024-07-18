@@ -89,7 +89,7 @@ def make_calib_dataloader(model, data_path, batch_size, n_calib,):
 
 
 def get_autoscale_calib_config(model, autoscale, smoothquant_alpha):
-    from autoscale import extract_kwargs 
+    from quantization.autoscale import extract_kwargs 
     autoscale_calib_cfg = extract_kwargs.get_autoscale_calib_cfg(model, autoscale=autoscale, smoothquant_alpha=smoothquant_alpha)
     return autoscale_calib_cfg
 
@@ -136,7 +136,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         act_dtype=qconfig["act_dtype"],
         act_nbits=qconfig["act_nbits"],
         kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
-        disable_inout=(True, False),
+        disable_inout=(True, True),
         )
 
     model.cpu()
@@ -172,7 +172,7 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
                 act_dtype=qconfig["act_dtype"],
                 act_nbits=qconfig["act_nbits"],
                 kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
-                disable_inout=(True, False),
+                disable_inout=(True, True),
             )
 
 
@@ -212,7 +212,7 @@ def get_args():
 
 def main():
     args = get_args()
-
+        
 
     golden_model = load_pytorch_model(
                             model_source = 'furiosa_llm_rope', 
