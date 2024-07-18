@@ -57,7 +57,7 @@ python -m quantization.calibrate --model_type="golden" \
                                     --calib_data_path=$CALIB_DATA_PATH \
                                     --n_calib=$N_CALIB \
                                     --gpu
-printf "Save golden calibration range to $LOG_PATH/calibration_range"
+printf "Save golden calibration files to $GOLDEN_QUANT_PARAM_PATH and $GOLDEN_QUANT_FORMAT_PATH"
 
 QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
@@ -71,7 +71,7 @@ python -m quantization.calibrate --model_type="mlperf-submission" \
                                     --n_calib=$N_CALIB \
                                     --gpu \
                                     --is_equivalence_ci
-printf "Save submission calibration range to $LOG_PATH/calibration_range"
+printf "Save submission calibration files to $QUANT_PARAM_PATH and $QUANT_FORMAT_PATH"
 
 N_DATA=1
 LOGIT_FOLDER_PATH=$work_dir/ci_file/logit_files

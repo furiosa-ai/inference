@@ -25,7 +25,6 @@ MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 
 # quantization args
-CALIBRATE=${CALIBRATE:=false}
 N_CALIB=${N_CALIB:=100} # total_len = 100
 CALIB_DATA_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
