@@ -87,7 +87,7 @@ install_miniconda() {
 
 # https://www.notion.so/furiosa/RNGD-SW-Stack-runtime-7df73fb4d92241e09a2721612ebd9c3d?pvs=4#85365fb447894f8f9952a824c135c197
 setup_conda_env() {
-    local ENV_NAME=llm
+    local ENV_NAME=mlperf-llm
     echo "Creating Conda environment ${ENV_NAME}..."
     conda create -n ${ENV_NAME} python=3.10 -y
     source "$(conda info --base)/etc/profile.d/conda.sh"

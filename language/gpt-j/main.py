@@ -12,7 +12,7 @@ from GPTJ_QSL import get_GPTJ_QSL
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["pytorch", "pytorch-rngd", "rngd"], default="pytorch", help="Backend")
+        "--backend", choices=["pytorch", "pytorch-rngd", "rngd", "rngd-npu"], default="pytorch", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                         "Server"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
@@ -143,6 +143,20 @@ def main():
         elif args.backend == "rngd":
             from backend_RNGD import get_SUT
 
+            sut = get_SUT(
+            model_path=args.model_path,
+            scenario=args.scenario,
+            dtype=args.dtype,
+            use_gpu=args.gpu,
+            network=args.network,
+            dataset_path=args.dataset_path,
+            max_examples=args.max_examples,
+            qsl=qsl, # If args.network is None, then only QSL get passed to the SUT, else it will be None,
+            args=args
+        )
+        elif args.backend == "rngd-npu":
+            from backend_RNGD_NPU import get_SUT
+            
             sut = get_SUT(
             model_path=args.model_path,
             scenario=args.scenario,
