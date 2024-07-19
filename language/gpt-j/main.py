@@ -5,6 +5,8 @@ import os
 import math
 import sys
 
+from pathlib import Path
+
 from GPTJ_QDL import GPTJ_QDL
 from GPTJ_QSL import get_GPTJ_QSL
 
@@ -47,6 +49,7 @@ def get_args():
     parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
     parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
     parser.add_argument("--device", help="device to run the model on")
+    parser.add_argument("--dump_path", type=Path, default=None, help="save input and output tensors of the model")
     args = parser.parse_args()
     return args
 
