@@ -44,35 +44,29 @@ printf "\tCALIBRATE: $CALIBRATE\n"
 
 export LOG_PATH
 
-# mkdir -p $LOG_PATH/calibration_range
+mkdir -p $LOG_PATH/calibration_range
 
-# if [ "$CALIBRATE" = true ]; then
-#     printf "\tNUM_CALIB_DATA: $N_CALIB\n"
-#     QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
-#     QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
-#     python -m quantization.calibrate --model_path=$MODEL_PATH \
-#                                      --quant_config_path=$QUANT_CONFIG_PATH \
-#                                      --quant_param_path=$QUANT_PARAM_PATH \
-#                                      --quant_format_path=$QUANT_FORMAT_PATH \
-#                                      --calib_data_path=$CALIB_DATA_PATH \
-#                                      --n_calib=$N_CALIB \
-#                                      --gpu
-#     printf "Save calibration range to $LOG_PATH/calibration_range"
-# else
-#     cp $QUANT_PARAM_PATH $LOG_PATH/calibration_range/quant_param.npy
-#     cp $QUANT_FORMAT_PATH $LOG_PATH/calibration_range/quant_format.yaml
-# fi
+if [ "$CALIBRATE" = true ]; then
+    printf "\tNUM_CALIB_DATA: $N_CALIB\n"
+    QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
+    QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
+    python -m quantization.calibrate --model_path=$MODEL_PATH \
+                                     --quant_config_path=$QUANT_CONFIG_PATH \
+                                     --quant_param_path=$QUANT_PARAM_PATH \
+                                     --quant_format_path=$QUANT_FORMAT_PATH \
+                                     --calib_data_path=$CALIB_DATA_PATH \
+                                     --n_calib=$N_CALIB \
+                                     --gpu
+    printf "Save calibration range to $LOG_PATH/calibration_range"
+else
+    cp $QUANT_PARAM_PATH $LOG_PATH/calibration_range/quant_param.npy
+    cp $QUANT_FORMAT_PATH $LOG_PATH/calibration_range/quant_format.yaml
+fi
 
 
 export N_DATA=2
-# GOLDEN_QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param_golden.npy
-# GOLDEN_QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format_golden.yaml
-
-GOLDEN_QUANT_PARAM_PATH=$work_dir/ci_file/calib/golden_qparam.npy
-GOLDEN_QUANT_FORMAT_PATH=$work_dir/ci_file/calib/golden_qformat.yaml
-QUANT_PARAM_PATH=$work_dir/ci_file/calib/quant_param_sliced.npy
-QUANT_FORMAT_PATH=$work_dir/ci_file/calib/quant_format_sliced.yaml
-
+GOLDEN_QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param_golden.npy
+GOLDEN_QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format_golden.yaml
 LOGIT_FOLDER_PATH=ci_file/logit_files
 mkdir -p $LOGIT_FOLDER_PATH
 
