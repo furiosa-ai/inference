@@ -1,6 +1,6 @@
 outs:
-- md5: 888a7fd017e3d9047d07204d2a8f1cbe.dir
-  size: 8832177224
-  nfiles: 717
+- md5: 5ab7c008e152eac37372e695c824ddde.dir
+  size: 9811631489
+  nfiles: 773
   hash: md5
   path: mlperf-gptj-log
