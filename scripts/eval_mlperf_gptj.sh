@@ -7,8 +7,6 @@ cleanup() {
     wait
     conda deactivate
     echo -e "\nBackground processes terminated.\n"
-    unset model_name model_dir git_dir work_dir data_dir log_dir env_name conda_base
-    unset SCENARIO BACKEND MLPERF_CONF MODEL_PATH N_DEVICES N_COUNT LOG_PATH DATASET_PATH SPLIT_DATASET_DIR DEVICE N_PARTITIONS PARTITION_OFFSET
 }
 
 # Function to print script usage
@@ -70,7 +68,10 @@ run_multi_device_eval() {
     echo -e "\nStart eval with $N_DEVICES devices\n"
     SECONDS=0
     for i in $(seq 0 $((N_DEVICES - 1))); do
-        DEVICES="$DEVICE:$i:0-3,$DEVICE:$i:4-7"
+        if N_DEVICES > 1; then
+            DEVICES="$DEVICE:$i:0-3,$DEVICE:$i:4-7"
+        fi
+        
         echo -e "\nEvaluation on device $DEVICES\n"
         echo -e "\nPartition $((i + PARTITION_OFFSET + 1)) out of $N_PARTITIONS\n"
         DATASET_PATH_i="$SPLIT_DATASET_DIR/split_$((i + PARTITION_OFFSET)).json"
@@ -157,10 +158,10 @@ MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 SPLIT_DATASET_DIR="${SPLIT_DATASET_DIR:-"$data_dir/dataset/cnn-daily-mail/validation/split"}"
 
-LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=${LOG_PATH:="$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)"}
 DEVICE=${DEVICE:="npu"}
 DEVICE_NUM=${DEVICE_NUM:="0"}
-DEVICES=${DEVICES:="$DEVICE:0:0-3,$DEVICE:0:4-7"}
+DEVICES=${DEVICES:="$DEVICE:$DEVICE_NUM:0-3,$DEVICE:$DEVICE_NUM:4-7"}
 N_COUNT=${N_COUNT:="13368"}
 N_DEVICES=${N_DEVICES:="1"}
 N_PARTITIONS="${N_PARTITIONS:-$N_DEVICES}"
@@ -201,7 +202,3 @@ echo -e "\n============= End of eval =============\n"
 
 # Exit from conda environment
 conda deactivate
-
-# Unset environment variables
-unset model_name model_dir git_dir work_dir data_dir log_dir env_name conda_base
-unset SCENARIO BACKEND MLPERF_CONF MODEL_PATH N_DEVICES N_COUNT LOG_PATH DATASET_PATH SPLIT_DATASET_DIR DEVICE N_PARTITIONS PARTITION_OFFSET
