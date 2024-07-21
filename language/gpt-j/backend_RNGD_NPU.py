@@ -5,7 +5,6 @@ from typing import List
 
 import mlperf_loadgen as lg
 import torch
-from backend_PyTorch import SUT_base as PyTorch_SUT_base
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
@@ -48,7 +47,7 @@ class GeneratorInputs:
     attention_mask: List
 
 
-class SUT_base(PyTorch_SUT_base):
+class SUT_base:
     def __init__(
         self,
         model_path,
@@ -74,18 +73,6 @@ class SUT_base(PyTorch_SUT_base):
             with open(self.dump_path, "w") as f:
                 json.dump([], f)
         self.dump = {}
-
-        # dtype
-        if dtype == "bfloat16":
-            self.amp_enabled = True
-            self.amp_dtype = torch.bfloat16
-            print("BF16 autocast")
-        elif dtype == "float16":
-            self.amp_enabled = True
-            self.amp_dtype = torch.float16
-        else:
-            self.amp_enabled = False
-            self.amp_dtype = torch.float32
         
         self.model = LLMTestCase(
             name="gpt-j-mlperf_submission-accuracy_test",
@@ -160,62 +147,62 @@ class SUT_base(PyTorch_SUT_base):
         input_ids_tensor = input_ids_tensor.to(torch_device_type)
         input_masks_tensor = input_masks_tensor.to(torch_device_type)
 
-        with torch.inference_mode(), torch.autocast(
-            device_type=torch_device_type,
-            enabled=self.amp_enabled,
-            dtype=self.amp_dtype if self.amp_enabled else None,
-        ):
-            input_batch = dict()
-            input_batch["input_ids"] = input_ids_tensor
-            input_batch["attention_mask"] = input_masks_tensor
+        input_batch = dict()
+        input_batch["input_ids"] = input_ids_tensor
+        input_batch["attention_mask"] = input_masks_tensor
 
-            
-            inputs = GeneratorInputs(input_ids=input_ids_tensor.tolist()[0], attention_mask=input_masks_tensor.tolist()[0])
+        inputs = GeneratorInputs(input_ids=input_ids_tensor.tolist()[0], attention_mask=input_masks_tensor.tolist()[0])
 
-            output = self.generator.engine.generate(inputs, sampling_params=self.model.sampling_params)
-            output_batch = output.outputs[0].token_ids
-            output_batch = torch.Tensor([output_batch]).to(torch.int64)
+        output = self.generator.engine.generate(inputs, sampling_params=self.model.sampling_params)
+        output_batch = output.outputs[0].token_ids
+        output_batch = torch.Tensor([output_batch]).to(torch.int64)
 
-            input_batch_lengths = [x.shape[0] for x in input_batch["input_ids"]]
+        input_batch_lengths = [x.shape[0] for x in input_batch["input_ids"]]
 
-            output_batch_lengths = [x.shape[0] for x in output_batch]
+        output_batch_lengths = [x.shape[0] for x in output_batch]
 
-            output_batch_truncated = []
-            for data, source_len in zip(output_batch, input_batch_lengths):
-                output_batch_truncated.append(data[source_len:])
+        output_batch_truncated = []
+        for data, source_len in zip(output_batch, input_batch_lengths):
+            output_batch_truncated.append(data[source_len:])
 
-            output_batch_truncated = torch.stack(output_batch_truncated)
+        output_batch_truncated = torch.stack(output_batch_truncated)
 
-            # Loadgen monitors the reponse in corresponding functions
-            if (
-                self.scenario == "SingleStream" or self.scenario == "Server"
-            ) and self.network == None:
-                return output_batch_truncated
+        # Loadgen monitors the reponse in corresponding functions
+        if (
+            self.scenario == "SingleStream" or self.scenario == "Server"
+        ) and self.network == None:
+            return output_batch_truncated
 
-            pred_output_batch = output_batch_truncated.cpu().numpy()
+        pred_output_batch = output_batch_truncated.cpu().numpy()
 
-            decoded_outputs = [
-                self.tokenizer.decode(output, skip_special_tokens=True)
-                for output in pred_output_batch
-            ]
-            response_text = decoded_outputs[0]
+        decoded_outputs = [
+            self.tokenizer.decode(output, skip_special_tokens=True)
+            for output in pred_output_batch
+        ]
+        response_text = decoded_outputs[0]
 
-            self.response = {
-                    "pred_output_batch": pred_output_batch.tolist(),
-                    "response_text": response_text,
-                }
-            
-            # Loadgen monitors the response in GPT_QDL
-            if self.network == "sut":
-                return {
-                    "pred_output_batch": pred_output_batch.tolist(),
-                    "response_text": response_text,
-                }
+        self.response = {
+                "pred_output_batch": pred_output_batch.tolist(),
+                "response_text": response_text,
+            }
+        
+        # Loadgen monitors the response in GPT_QDL
+        if self.network == "sut":
+            return {
+                "pred_output_batch": pred_output_batch.tolist(),
+                "response_text": response_text,
+            }
 
-            response_array = array.array("B", pred_output_batch[0].tobytes())
-            bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_id, bi[0], bi[1])
-            lg.QuerySamplesComplete([response])
+        response_array = array.array("B", pred_output_batch[0].tobytes())
+        bi = response_array.buffer_info()
+        response = lg.QuerySampleResponse(query_id, bi[0], bi[1])
+        lg.QuerySamplesComplete([response])
+
+    def flush_queries(self):
+        pass
+
+    def __del__(self):
+        print("Finished destroying SUT.")
 
 
 class SUT_Offline(SUT_base):
