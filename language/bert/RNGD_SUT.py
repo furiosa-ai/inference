@@ -26,6 +26,8 @@ from squad_QSL import get_squad_QSL
 from torch.fx import GraphModule
 from transformers import BertConfig
 
+import tqdm
+
 BUCKET_SIZE = 384
 PAD_TOKEN_ID: int = 0  # EOS token
 
@@ -103,7 +105,7 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
         self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
-        for i in range(len(query_samples)):
+        for i in tqdm.tqdm(range(len(query_samples)), unit="queries"):
             eval_features = self.qsl.get_features(query_samples[i].index)
             if self.dump_path:
                 self.dump.update({"qsl_idx": query_samples[i].index})
