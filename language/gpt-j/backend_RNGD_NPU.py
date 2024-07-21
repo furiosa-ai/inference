@@ -1,22 +1,13 @@
 import argparse
 import array
 import os
-from typing import Dict, List, Tuple
+from typing import List
 
 import mlperf_loadgen as lg
 import torch
 from backend_PyTorch import SUT_base as PyTorch_SUT_base
-from furiosa_llm_models.gptj.symbolic.mlperf_submission import \
-    GPTJForCausalLM as upstream_GPTJForCausalLM
-from generator_RNGD import (MLPerfSubmissionBeamSearch,
-                            expand_inputs_for_generation)
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from transformers.generation.logits_process import \
-    MinNewTokensLengthLogitsProcessor
-from transformers.generation.stopping_criteria import MaxLengthCriteria
-from transformers.generation.utils import BeamSearchScorer
-from transformers.utils.fx import get_concrete_args
 
 from tests.e2e_pipe import LLMTestCase, prestep_furiosa_llm, Model
 from furiosa_llm import LLMBackend, SamplingParams
@@ -43,11 +34,11 @@ NUM_BEAMS = 4
 LENGTH_PENALTY = 1.0
 NUM_RETURN_SEQUENCES = 1
 RETURN_DICT_IN_GENERATE = False
-LOGITS_PROCESSOR = MinNewTokensLengthLogitsProcessor
-STOPPING_CRITERIA = MaxLengthCriteria
-KV_DTYPE = torch.float32
-QUANT_KV_DTYPE = torch.int8
+
 BUCKET_SIZE = 2048
+PREFILL_BUCKET_SIZE = BUCKET_SIZE - MAX_NEW_TOKENS
+TOTAL_NUM_BLOCKS = PREFILL_BUCKET_SIZE + MAX_NEW_TOKENS * NUM_BEAMS
+NUM_PADDING_BLOCKS = 1
 NUM_REAL_BATCH = 1
 
             
@@ -101,19 +92,19 @@ class SUT_base(PyTorch_SUT_base):
             model_metadata=Model.GPTJ_6B_28L_MLPERF_QUANTIZED,
             prompts=["dummy unused prompt"],
             sampling_params=SamplingParams(
-                n=1, use_beam_search=True, best_of=4, max_tokens=128, min_tokens=30
+                n=NUM_RETURN_SEQUENCES, use_beam_search=True, best_of=NUM_BEAMS, max_tokens=MAX_NEW_TOKENS, min_tokens=MIN_NEW_TOKENS
             ),
             devices=args.device,
             mppp=PipelineParallelismMppp(),
             one_supertask_per_device=True,
             paged_attention_block_size=1,
-            paged_attention_num_blocks=8192*2,
-            prefill_buckets=[(1, 1920)],
-            decode_buckets=[(4, 2048)],
+            paged_attention_num_blocks=8192*2, # TODO: TOTAL_NUM_BLOCKS * batch_size_in_decode + NUM_PADDING_BLOCKS, ex) (1920 + 128 * 4 + 1) * 1 = 2433
+            prefill_buckets=[(1, PREFILL_BUCKET_SIZE)], # (1, 1920)
+            decode_buckets=[(NUM_BEAMS * args.batch_size_in_decode, BUCKET_SIZE)], # (4 * 1, 2048) if batch_size_in_decode=1
             kv_cache_sharing_across_beams_config=KvCacheSharingAcrossBeamsConfig(
-                4,
-                128,
-            ),
+                NUM_BEAMS,
+                MAX_NEW_TOKENS,
+            ), # (4, 128)
             use_blockwise_compile=True,
         )
         self.generator = prestep_furiosa_llm(self.model, backend=LLMBackend.FURIOSA_RT_V2)
@@ -131,11 +122,6 @@ class SUT_base(PyTorch_SUT_base):
 
     def issue_queries(self, query_samples):
         print("Number of Samples in query_samples : ", len(query_samples))
-
-        total_samples_done = 0
-        list_prompts_tokens = []
-        list_prompts_attn_masks = []
-
         # Pass each query to inference_call function
         # Activates only when scenario is Offline and network mode is None
         for i in tqdm(range(len(query_samples))):

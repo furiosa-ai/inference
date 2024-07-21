@@ -24,6 +24,7 @@ DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 DEVICES=${DEVICES:="npu:0:0-3,npu:0:4-7"}
 N_COUNT=${N_COUNT:="13368"} # total_len=13,368
+BATCH_SIZE_IN_DECODE=${BATCH_SIZE_IN_DECODE:="1"}
 DUMP_PATH=none
 DO_DUMP=${DO_DUMP:=false}
 
@@ -34,6 +35,7 @@ fi
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
 printf "\tNUM_EVAL_DATA: $N_COUNT\n"
+printf "\tBATCH_SIZE_IN_DECODE: $BATCH_SIZE_IN_DECODE\n"
 printf "\tLOG_PATH: $LOG_PATH\n"
 printf "\tLLM_ENGINE_ARTIFACTS_PATH: $LLM_ENGINE_ARTIFACTS_PATH\n"
 printf "\tDEVICE: $DEVICES\n"
@@ -52,6 +54,7 @@ python $work_dir/main.py --scenario=$SCENARIO \
                --model-path=$MODEL_PATH \
                --dataset-path=$DATASET_PATH \
                --max_examples=$N_COUNT \
+               --batch_size_in_decode=$BATCH_SIZE_IN_DECODE \
                --device=$DEVICES \
                --dump_path=$DUMP_PATH \
                --accuracy
@@ -62,6 +65,8 @@ ACCURACY_LOG_FILE=$LOG_PATH/mlperf_log_accuracy.json
 python $work_dir/evaluation.py --mlperf-accuracy-file=$ACCURACY_LOG_FILE \
                      --dataset-file=$DATASET_PATH \
                      &> $LOG_PATH/accuracy_result.log
+
+cat $LOG_PATH/accuracy_result.log
 
 printf "Save eval log to $LOG_PATH"
 
