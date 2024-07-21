@@ -94,10 +94,21 @@ setup_conda_env() {
     conda activate ${ENV_NAME}
 }
 
+install_mlperf_loadgen() {
+    echo "Installing MLPerf LoadGen..."
+    git_dir=$(git rev-parse --show-toplevel)
+
+    pip install pybind11==2.11.1
+    cd $git_dir/loadgen 
+    python setup.py install
+    cd -;
+}
+
 # https://www.notion.so/furiosa/RNGD-SW-Stack-runtime-7df73fb4d92241e09a2721612ebd9c3d?pvs=4#02c925d7dc3348be8e30ad6d102bafa3
-install_dvc() {
+install_pip_packages() {
     echo "Installing DVC with S3 support..."
     pip install 'dvc[s3]'
+    pip install datasets==2.18.0 nltk==3.8.1 evaluate==0.4.1 absl-py==2.1.0 rouge_score==0.1.2 accelerate==0.31.0
 }
 
 # https://www.notion.so/furiosa/RNGD-SW-Stack-runtime-7df73fb4d92241e09a2721612ebd9c3d?pvs=4#847dd27d9857405a8b3c26b4538c3656
