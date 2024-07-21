@@ -59,10 +59,12 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
     ```sh
     # Specify LOG_PATH
     LOG_PATH=...
+    NUM_PARTITIONS=...
+    TOTAL_DATA_LEN=13368
     DATASET_PATH="data/dataset/cnn-daily-mail/validation/cnn_eval.json"
 
     conda activate mlperf-gpt-j
-    python "language/gpt-j/gather_log_accuracy.py" --log-dir="$LOG_PATH"
+    python "language/gpt-j/gather_log.py" "$LOG_PATH" -p $NUM_PARTITIONS -n $TOTAL_DATA_LEN
     MLPERF_ACCURACY_FILE="$LOG_PATH/merged_mlperf_log_accuracy.json"
     python "language/gpt-j/evaluation.py" --mlperf-accuracy-file="$MLPERF_ACCURACY_FILE" \
                                         --dataset-file="$DATASET_PATH" &> "$LOG_PATH/accuracy_result.log"
