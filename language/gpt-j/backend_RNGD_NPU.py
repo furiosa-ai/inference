@@ -23,6 +23,7 @@ from furiosa_llm import LLMBackend, SamplingParams
 from furiosa_llm.api import KvCacheSharingAcrossBeamsConfig
 from tests.utils import PipelineParallelismMppp
 from dataclasses import dataclass
+import json
 
 gen_kwargs = {
     "early_stopping": True,
@@ -77,7 +78,11 @@ class SUT_base(PyTorch_SUT_base):
         self.max_examples = max_examples
         self.scenario = scenario
         self.qsl = qsl
-        print("Loading PyTorch model...")
+        self.dump_path = args.dump_path
+        if not self.dump_path.exists():
+            with open(self.dump_path, "w") as f:
+                json.dump([], f)
+        self.dump = {}
 
         # dtype
         if dtype == "bfloat16":
@@ -98,7 +103,7 @@ class SUT_base(PyTorch_SUT_base):
             sampling_params=SamplingParams(
                 n=1, use_beam_search=True, best_of=4, max_tokens=128, min_tokens=30
             ),
-            devices="npu:0:0-3, npu:0:0-3",
+            devices=args.device,
             mppp=PipelineParallelismMppp(),
             one_supertask_per_device=True,
             paged_attention_block_size=1,
@@ -123,6 +128,40 @@ class SUT_base(PyTorch_SUT_base):
 
         # construct SUT
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
+
+    def issue_queries(self, query_samples):
+        print("Number of Samples in query_samples : ", len(query_samples))
+
+        total_samples_done = 0
+        list_prompts_tokens = []
+        list_prompts_attn_masks = []
+
+        # Pass each query to inference_call function
+        # Activates only when scenario is Offline and network mode is None
+        for i in tqdm(range(len(query_samples))):
+            index = query_samples[i].index
+            input_ids_tensor = self.qsl.data_object.source_encoded_input_ids[index]
+            input_masks_tensor = self.qsl.data_object.source_encoded_attn_masks[index]
+            text = self.qsl.data_object.sources[index]
+            query = {
+                "input_text": text,
+                "input_ids_tensor": input_ids_tensor.tolist(),
+                "input_masks_tensor": input_masks_tensor.tolist()
+            }
+
+            self.inference_call(query, query_samples[i].id)
+            if self.dump_path:
+                self.dump.update({"qsl_idx": index})
+                self.dump.update({"input": query})
+                self.dump.update({"output": self.response})
+                with open(self.dump_path, "r") as f:
+                    data = json.load(f)
+
+                data.append(self.dump)
+                data = sorted(data, key=lambda x: x["qsl_idx"])
+
+                with open(self.dump_path, "w") as f:
+                    json.dump(data, f)
 
     def inference_call(self, query, query_id=None):
         """Common for all scenarios"""
@@ -175,6 +214,11 @@ class SUT_base(PyTorch_SUT_base):
             ]
             response_text = decoded_outputs[0]
 
+            self.response = {
+                    "pred_output_batch": pred_output_batch.tolist(),
+                    "response_text": response_text,
+                }
+            
             # Loadgen monitors the response in GPT_QDL
             if self.network == "sut":
                 return {

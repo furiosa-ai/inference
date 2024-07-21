@@ -22,21 +22,29 @@ BACKEND="rngd-npu"
 MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-DEVICES=${DEVICES:="npu:0:0-3, npu:0:0-3"}
+DEVICES=${DEVICES:="npu:0:0-3,npu:0:4-7"}
 N_COUNT=${N_COUNT:="13368"} # total_len=13,368
+DUMP_PATH=none
+DO_DUMP=${DO_DUMP:=false}
+
+if [ "$DO_DUMP" = true ]; then
+DUMP_PATH="$LOG_PATH/generator_dump_n$N_COUNT.json"
+fi
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
 printf "\tNUM_EVAL_DATA: $N_COUNT\n"
+printf "\tLOG_PATH: $LOG_PATH\n"
 printf "\tLLM_ENGINE_ARTIFACTS_PATH: $LLM_ENGINE_ARTIFACTS_PATH\n"
 printf "\tDEVICE: $DEVICES\n"
+if [ "$DO_DUMP" = true ]; then
+    printf "\tDUMP_PATH: $DUMP_PATH\n"
+fi
 
 export NPU_ARCH=renegade
-export LLM_ENGINE_ARTIFACTS_PATH=${LLM_ENGINE_ARTIFACTS_PATH:-"$data_dir/compile/gptj"}
+# export LLM_ENGINE_ARTIFACTS_PATH="/home/furiosa/llm_engine_artifacts/mlperf_gptj_accuracy_0717"
 export DISABLE_PROFILER=1
 export LOG_PATH
-
-mkdir -p $LOG_PATH/calibration_range
 
 SECONDS=0
 python $work_dir/main.py --scenario=$SCENARIO \
@@ -45,6 +53,7 @@ python $work_dir/main.py --scenario=$SCENARIO \
                --dataset-path=$DATASET_PATH \
                --max_examples=$N_COUNT \
                --device=$DEVICES \
+               --dump_path=$DUMP_PATH \
                --accuracy
 duration=$SECONDS
 printf "$((duration / 60)) minutes and $((duration % 60)) seconds elapsed." &> $LOG_PATH/elapsed_time.log

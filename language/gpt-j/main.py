@@ -6,7 +6,6 @@ import math
 import sys
 
 from pathlib import Path
-
 from GPTJ_QDL import GPTJ_QDL
 from GPTJ_QSL import get_GPTJ_QSL
 
