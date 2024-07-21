@@ -68,9 +68,14 @@ class SUT_base:
         self.scenario = scenario
         self.qsl = qsl
         self.dump_path = args.dump_path
-        if not self.dump_path.exists():
-            with open(self.dump_path, "w") as f:
-                json.dump([], f)
+
+        if not str(self.dump_path.stem):
+            self.dump_path = None
+        
+        if self.dump_path is not None:
+            if not self.dump_path.exists():
+                with open(self.dump_path, "w") as f:
+                    json.dump([], f)
         self.dump = {}
 
         self.model = LLMTestCase(
