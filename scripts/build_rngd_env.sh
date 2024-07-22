@@ -108,7 +108,7 @@ install_mlperf_loadgen() {
 install_pip_packages() {
     echo "Installing DVC with S3 support..."
     pip install 'dvc[s3]'
-    pip install datasets==2.18.0 nltk==3.8.1 evaluate==0.4.1 absl-py==2.1.0 rouge_score==0.1.2
+    pip install datasets==2.18.0 nltk==3.8.1 evaluate==0.4.1 absl-py==2.1.0 rouge_score==0.1.2 tokenization==1.0.7
 }
 
 # https://www.notion.so/furiosa/RNGD-SW-Stack-runtime-7df73fb4d92241e09a2721612ebd9c3d?pvs=4#847dd27d9857405a8b3c26b4538c3656

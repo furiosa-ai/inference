@@ -43,70 +43,19 @@ run_single_device_eval() {
     echo -e "\nEvaluation on device $DEVICES\n"
     SECONDS=0
     
-    LOG_PATH="$LOG_PATH" python "$work_dir/main.py" --scenario="$SCENARIO" \
-                                                    --backend="$BACKEND" \
-                                                    --mlperf_conf="$MLPERF_CONF" \
-                                                    --model-path="$MODEL_PATH" \
-                                                    --dataset-path="$DATASET_PATH" \
-                                                    --max_examples="$N_COUNT" \
-                                                    --device="$DEVICES" \
-                                                    --dump_path=$DUMP_PATH \
-                                                    --accuracy
+    LOG_PATH=$LOG_PATH \
+    ML_MODEL_FILE_WITH_PATH=$MODEL_PATH \
+    VOCAB_FILE=$VOCAB_PATH \
+    DATASET_FILE=$DATASET_PATH \
+    SKIP_VERIFY_ACCURACY=true python $work_dir/run.py --scenario=$SCENARIO \
+                                                      --backend=$BACKEND \
+                                                      --mlperf_conf=$MLPERF_CONF \
+                                                      --max_examples=$N_COUNT \
+                                                      --accuracy
     duration=$SECONDS
     printf "%d minutes and %d seconds elapsed." "$((duration / 60))" "$((duration % 60))" > "$LOG_PATH/elapsed_time.log"
     echo -e "\nAll evaluations completed.\n"
     MLPERF_ACCURACY_FILE="$LOG_PATH/mlperf_log_accuracy.json"
-}
-
-# Function to run evaluation on multiple devices
-run_multi_device_eval() {
-    echo -e "\nSplit $N_COUNT dataset into $N_PARTITIONS partitions for parallel evaluation\n"
-    python "$work_dir/split_dataset.py" --dataset-path="$DATASET_PATH" \
-                                        --num-partitions="$N_PARTITIONS" \
-                                        --num-samples="$N_COUNT" \
-                                        --output-dir="$SPLIT_DATASET_DIR"
-    echo -e "\nStart eval with $N_DEVICES devices\n"
-    SECONDS=0
-    for i in $(seq 0 $((N_DEVICES - 1))); do
-        if N_DEVICES > 1; then
-            DEVICES="$DEVICE:$i:0-3,$DEVICE:$i:4-7"
-        fi
-        
-        echo -e "\nEvaluation on device $DEVICES\n"
-        echo -e "\nPartition $((i + PARTITION_OFFSET + 1)) out of $N_PARTITIONS\n"
-        DATASET_PATH_i="$SPLIT_DATASET_DIR/split_$((i + PARTITION_OFFSET)).json"
-        LOG_PATH_i="$LOG_PATH/$((i + PARTITION_OFFSET))"
-
-        if [ "$DO_DUMP" = true ]; then
-            DUMP_PATH="$LOG_PATH_i/generator_dump.json"
-        fi
-
-        LOG_PATH="$LOG_PATH_i" python "$work_dir/main.py" --scenario="$SCENARIO" \
-                                                          --backend="$BACKEND" \
-                                                          --mlperf_conf="$MLPERF_CONF" \
-                                                          --model-path="$MODEL_PATH" \
-                                                          --dataset-path="$DATASET_PATH_i" \
-                                                          --device="$DEVICES" \
-                                                          --dump_path=$DUMP_PATH \
-                                                          --accuracy &
-    done
-
-    wait
-
-    duration=$SECONDS
-    printf "%d minutes and %d seconds elapsed." "$((duration / 60))" "$((duration % 60))" > "$LOG_PATH/elapsed_time.log"
-    echo -e "\nAll evaluations completed.\n"
-
-    if [ "$N_DEVICES" == "$N_PARTITIONS" ]; then
-        python "$work_dir/gather_log.py" "$LOG_PATH" -p "$N_PARTITIONS" -n "$N_COUNT"
-        MLPERF_ACCURACY_FILE="$LOG_PATH/merged_mlperf_log_accuracy.json"
-
-        if [ "$DO_DUMP" = true ]; then
-            python "$work_dir/gather_log.py" "$LOG_PATH" -p "$N_PARTITIONS" -n "$N_COUNT"
-        fi
-    else
-        SKIP_VERIFY_ACCURACY=true
-    fi
 }
 
 # Parse command-line arguments
@@ -123,8 +72,8 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Define environment variables
-model_name=mlperf-gpt-j
-model_dir=language/gpt-j
+model_name=mlperf-bert
+model_dir=language/bert
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
 data_dir=$git_dir/data
@@ -154,16 +103,15 @@ SCENARIO=${SCENARIO:="Offline"}
 BACKEND="rngd-npu"
 NPU_ARCH=${NPU_ARCH:="renegade"}
 MLPERF_CONF="${MLPERF_CONF:-"$git_dir/mlperf.conf"}"
-MODEL_PATH=$data_dir/models/gpt-j
-DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
-SPLIT_DATASET_DIR="${SPLIT_DATASET_DIR:-"$data_dir/dataset/cnn-daily-mail/validation/split"}"
+MODEL_PATH=$data_dir/models/bert/model.pytorch
+VOCAB_PATH=$data_dir/models/bert/vocab.txt
+DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 
 LOG_PATH=${LOG_PATH:="$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)"}
 DEVICE=${DEVICE:="npu"}
 DEVICE_NUM=${DEVICE_NUM:="0"}
-DEVICES=${DEVICES:="$DEVICE:$DEVICE_NUM:0-3,$DEVICE:$DEVICE_NUM:4-7"}
-DEVICES="npu:1:0-3,npu:1:4-7"
-N_COUNT=${N_COUNT:="13368"}
+DEVICES=${DEVICES:="$DEVICE:$DEVICE_NUM:1"}
+N_COUNT=${N_COUNT:="10833"}
 N_DEVICES=${N_DEVICES:="1"}
 N_PARTITIONS="${N_PARTITIONS:-$N_DEVICES}"
 BATCH_SIZE_IN_DECODE=${BATCH_SIZE_IN_DECODE:="1"}
@@ -184,7 +132,7 @@ print_eval_config
 
 # Run evaluation
 if (( N_PARTITIONS > 1 )); then
-    run_multi_device_eval
+    exit 1
 else
     run_single_device_eval
 fi
@@ -193,8 +141,12 @@ fi
 if $SKIP_VERIFY_ACCURACY; then
     echo -e "Skipping accuracy evaluation."
 else
-    python "$work_dir/evaluation.py" --mlperf-accuracy-file="$MLPERF_ACCURACY_FILE" \
-                                     --dataset-file="$DATASET_PATH" &> "$LOG_PATH/accuracy_result.log"
+    python "$work_dir/accuracy-squad.py" --vocab_file=$VOCAB_PATH \
+                                         --val_data=$DATASET_PATH \
+                                         --log_file=$LOG_PATH/mlperf_log_accuracy.json \
+                                         --out_file=$LOG_PATH/predictions.json \
+                                         --max_examples=$N_COUNT
+                                         &> $LOG_PATH/accuracy_result.log
     cat "$LOG_PATH/accuracy_result.log"
     echo -e "Save eval log to $LOG_PATH"
 fi
