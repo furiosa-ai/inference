@@ -59,9 +59,9 @@ class BertMLPerfSubmissionEncoder:
             for arg in self.model.concrete_args:
                 if arg in model_kwargs:
                     del model_kwargs[arg]
-
+        print(model_kwargs)
         logits = self.model(**model_kwargs)
-
+        print(logits)
         outputs = []
         for batch_index, target_location in enumerate(packed_target_locations):
             for single_target_location in target_location:

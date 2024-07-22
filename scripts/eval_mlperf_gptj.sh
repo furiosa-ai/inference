@@ -98,11 +98,11 @@ run_multi_device_eval() {
     echo -e "\nAll evaluations completed.\n"
 
     if [ "$N_DEVICES" == "$N_PARTITIONS" ]; then
-        python "$work_dir/gather_log_accuracy.py" --log-dir="$LOG_PATH"
+        python "$work_dir/gather_log.py" "$LOG_PATH" -p "$N_PARTITIONS" -n "$N_COUNT"
         MLPERF_ACCURACY_FILE="$LOG_PATH/merged_mlperf_log_accuracy.json"
 
         if [ "$DO_DUMP" = true ]; then
-            python "$work_dir/gather_generator_dump.py" --log-dir="$LOG_PATH"
+            python "$work_dir/gather_log.py" "$LOG_PATH" -p "$N_PARTITIONS" -n "$N_COUNT"
         fi
     else
         SKIP_VERIFY_ACCURACY=true
@@ -162,6 +162,7 @@ LOG_PATH=${LOG_PATH:="$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)"}
 DEVICE=${DEVICE:="npu"}
 DEVICE_NUM=${DEVICE_NUM:="0"}
 DEVICES=${DEVICES:="$DEVICE:$DEVICE_NUM:0-3,$DEVICE:$DEVICE_NUM:4-7"}
+DEVICES="npu:1:0-3,npu:1:4-7"
 N_COUNT=${N_COUNT:="13368"}
 N_DEVICES=${N_DEVICES:="1"}
 N_PARTITIONS="${N_PARTITIONS:-$N_DEVICES}"

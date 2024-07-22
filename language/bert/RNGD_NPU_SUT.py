@@ -2,6 +2,7 @@ import array
 import json
 import os
 import sys
+from typing import List
 
 sys.path.insert(
     0,
@@ -13,13 +14,19 @@ sys.path.insert(0, os.getcwd())
 
 import json
 from pathlib import Path
+from dataclasses import dataclass
 
 import mlperf_loadgen as lg
 import numpy as np
 import torch
 import transformers
+from furiosa_llm import LLMBackend, SamplingParams
+
 from furiosa_llm_models.bert.symbolic.mlperf_submission import \
     BertForQuestionAnswering
+from tests.e2e_pipe import LLMTestCase, Model, prestep_furiosa_llm
+from tests.utils import PipelineParallelismMppp
+
 from pytorch_SUT import BERT_PyTorch_SUT
 from RNGD_encoder import BertMLPerfSubmissionEncoder, stack_tensors
 from squad_QSL import get_squad_QSL
@@ -31,8 +38,14 @@ import tqdm
 BUCKET_SIZE = 384
 PAD_TOKEN_ID: int = 0  # EOS token
 
+@dataclass
+class EncoderInputs:
+    input_ids: List
+    attention_mask: List
+    token_type_ids: List
 
-class BERT_RNGD_SUT(BERT_PyTorch_SUT):
+
+class BERT_RNGD_NPU_SUT(BERT_PyTorch_SUT):
     def __init__(self, args):
         print("Loading BERT configs...")
         config_path = Path(__file__).parent.joinpath("bert_config.json")
@@ -54,52 +67,33 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
         )
 
         self.network = args.network
-        self.dev = (
-            torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
-        )
-        self.version = transformers.__version__
 
         self.dump_path = args.dump_path
-        if not self.dump_path.exists():
-            with open(self.dump_path, "w") as f:
-                json.dump([], f)
-        self.dump = {}
+        # if not self.dump_path.exists():
+        #     with open(self.dump_path, "w") as f:
+        #         json.dump([], f)
+        # self.dump = {}
 
         print("Loading PyTorch model...")
-        self.model = BertForQuestionAnswering(config)
-        self.model.to(self.dev)
-        self.model.eval()
-        model_file = os.environ.get(
-            "ML_MODEL_FILE_WITH_PATH",
-            "build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch",
+        self.model = LLMTestCase(
+            name="mlperf-bert-submission-blockwise-accuracy_test",
+            model_metadata=Model.BERT_LARGE_24L_MLPERF_QUANTIZED,
+            prompts=[], # unused
+            qa_context=[], # unused
+            sampling_params=SamplingParams(), # unused
+            devices="npu:0:0",
+            mppp=PipelineParallelismMppp(),
+            one_supertask_per_device=True,
+            prefill_buckets=[
+                (1, 384),
+            ],
+            use_blockwise_compile=True,
         )
-        self.model.load_state_dict(torch.load(model_file), strict=False)
+        for n, p in self.model.model_metadata.pretrained_model().named_parameters():
+            print(n, p)
 
-        if args.quantize:
-            from quantization import quantize_model
-            from quantization.utils import random_seed, set_optimization
+        self.encoder = prestep_furiosa_llm(self.model, backend=LLMBackend.TORCH_PIPELINE_RUNNER)
 
-            random_seed()
-            set_optimization(args.torch_numeric_optim)
-
-            if not args.gpu:
-                raise ValueError(
-                    "Inference on a device other than GPU is not supported yet."
-                )
-            traced_model = self.model.trace()
-            self.model = quantize_model(
-                traced_model,
-                args.quant_param_path,
-                args.quant_format_path,
-            )
-            for n, p in self.model.named_parameters():
-                print(n, p)
-        else:
-            self.model = self.model.trace()
-
-        self.encoder = BertMLPerfSubmissionEncoder(
-            self.model, bucket_size=BUCKET_SIZE, pad_token_id=PAD_TOKEN_ID
-        )
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
@@ -141,32 +135,46 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
 
         if self.dump_path:
             self.dump.update({"input": query})
-
+        # print(torch.count_nonzero(torch.LongTensor(input_ids)))
+        # print(input_ids)
+        # input_ids = input_ids[:171]
+        # print(input_ids)
+        # input_mask = input_mask[:171]
+        # segment_ids = segment_ids[:171]
+        # print(input_ids)
+        # print(input_mask)
+        # print(segment_ids)
+        # print(input_ids)
         with torch.no_grad():
-            print(f"{input_ids=}")
-            print(f"{input_mask=}")
-            print(f"{segment_ids=}")
-            model_output = self.encoder.encode(
-                input_ids=torch.LongTensor(input_ids).unsqueeze(0).to(self.dev),
-                attention_mask=torch.LongTensor(input_mask).unsqueeze(0).to(self.dev),
-                token_type_ids=torch.LongTensor(segment_ids).unsqueeze(0).to(self.dev),
-            )
-            print("model_output", model_output)
+            inputs = EncoderInputs(input_ids=torch.LongTensor(input_ids).tolist(),
+                attention_mask=torch.LongTensor(input_mask).tolist(),
+                token_type_ids=torch.LongTensor(segment_ids).tolist())
+            # print(f"{input_ids=}")
+            # print(f"{input_mask=}")
+            # print(f"{segment_ids=}")
+            model_output = self.encoder.engine.bert_unsplit_forward(inputs)
+            # print("model_output", model_output)
             if self.dump_path:
                 assert len(model_output) == 1
                 self.dump.update({"output": {"output_ids": model_output[0].tolist()}})
+            # print(input_ids)
+            # print(len(input_ids))
+            # print(model_output)
+            # print(model_output.shape)
+            # input_length = torch.LongTensor(input_ids).unsqueeze(0).shape[-1]
+            # output = stack_tensors(model_output, max_shape=[input_length, 2])
+            start_logits, end_logits = model_output[:, 0], model_output[:, 1]
 
-            input_length = torch.LongTensor(input_ids).unsqueeze(0).shape[-1]
-            output = stack_tensors(model_output, max_shape=[input_length, 2])
-            start_logits, end_logits = output.split(1, dim=-1)
-            start_logits = start_logits.squeeze(-1).contiguous()
-            end_logits = end_logits.squeeze(-1).contiguous()
+            # start_logits = start_logits.squeeze(-1).contiguous()
+            # end_logits = end_logits.squeeze(-1).contiguous()
+            # start_logits = start_logits.cpu().numpy()[:, 0]
+            # end_logits = end_logits.cpu().numpy()[:, 1]
 
             output = (
-                torch.stack([start_logits, end_logits], axis=-1)
-                .squeeze(0)
-                .cpu()
-                .numpy()
+                np.stack([start_logits, end_logits], axis=-1)
+                # .squeeze(0)
+                # .cpu()
+                # .numpy()
             )
             if self.network == "sut":
                 return output.tolist()
@@ -177,5 +185,5 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
             lg.QuerySamplesComplete([response])
 
 
-def get_rngd_sut(args):
-    return BERT_RNGD_SUT(args)
+def get_rngd_npu_sut(args):
+    return BERT_RNGD_NPU_SUT(args)
