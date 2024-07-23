@@ -48,6 +48,7 @@ class EncoderInputs:
 class BERT_RNGD_NPU_SUT(BERT_PyTorch_SUT):
     def __init__(self, args):
         print("Loading BERT configs...")
+        print("RNGD NPU (but CPU now) BERT")
         config_path = Path(__file__).parent.joinpath("bert_config.json")
         with open(config_path, "r") as f:
             config_json = json.load(f)
@@ -74,14 +75,15 @@ class BERT_RNGD_NPU_SUT(BERT_PyTorch_SUT):
         #         json.dump([], f)
         # self.dump = {}
 
-        print("Loading PyTorch model...")
+        print("Loading PyTorch model...\n"*10)
         self.model = LLMTestCase(
             name="mlperf-bert-submission-blockwise-accuracy_test",
             model_metadata=Model.BERT_LARGE_24L_MLPERF_QUANTIZED,
             prompts=[], # unused
             qa_context=[], # unused
             sampling_params=SamplingParams(), # unused
-            devices="npu:0:0",
+            # devices="npu:0:0",
+            devices="cpu:0",
             mppp=PipelineParallelismMppp(),
             one_supertask_per_device=True,
             prefill_buckets=[
@@ -92,7 +94,8 @@ class BERT_RNGD_NPU_SUT(BERT_PyTorch_SUT):
         for n, p in self.model.model_metadata.pretrained_model().named_parameters():
             print(n, p)
 
-        self.encoder = prestep_furiosa_llm(self.model, backend=LLMBackend.TORCH_PIPELINE_RUNNER)
+        # self.encoder = prestep_furiosa_llm(self.model, backend=LLMBackend.TORCH_PIPELINE_RUNNER)
+        self.encoder = prestep_furiosa_llm(self.model, backend=LLMBackend.TORCH_PIPELINE_RUNNER_WITH_SCHEDULER)
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)

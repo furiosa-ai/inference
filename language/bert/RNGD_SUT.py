@@ -57,6 +57,7 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
         self.dev = (
             torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
         )
+        self.dev = torch.device("cpu")
         self.version = transformers.__version__
 
         self.dump_path = args.dump_path

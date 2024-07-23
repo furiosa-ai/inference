@@ -8,7 +8,8 @@ work_dir=$git_dir/$model_dir
 data_dir=$git_dir/data
 quant_data_dir=$data_dir/quantization/bert
 log_dir=$git_dir/logs
-env_name=mlperf-$model_name
+# env_name=mlperf-$model_name
+env_name=mlperf-llm
 conda_base=$($CONDA_EXE info --base)
 
 # Enter existing conda environment
@@ -18,7 +19,8 @@ conda activate $env_name
 # Eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:=Offline}
-BACKEND="rngd"
+# BACKEND="rngd"
+BACKEND="rngd-npu"
 MODEL_PATH=$data_dir/models/bert/model.pytorch
 MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 VOCAB_PATH=$data_dir/models/bert/vocab.txt

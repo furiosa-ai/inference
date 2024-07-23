@@ -14,7 +14,7 @@ install_rust() {
 # https://www.notion.so/furiosa/RNGD-SW-Stack-runtime-7df73fb4d92241e09a2721612ebd9c3d?pvs=4#a13025628209440c917a424ea173efe5
 install_packages() {
     echo "Updating package list and installing packages..."
-    apt update && apt install -y \
+    sudo apt update && sudo apt install -y \
         autoconf \
         automake \
         build-essential \
@@ -89,7 +89,7 @@ install_miniconda() {
 setup_conda_env() {
     local ENV_NAME=mlperf-llm
     echo "Creating Conda environment ${ENV_NAME}..."
-    conda create -n ${ENV_NAME} python=3.10 -y
+    # conda create -n ${ENV_NAME} python=3.10 -y
     source "$(conda info --base)/etc/profile.d/conda.sh"
     conda activate ${ENV_NAME}
 }
@@ -99,7 +99,7 @@ install_mlperf_loadgen() {
     git_dir=$(git rev-parse --show-toplevel)
 
     pip install pybind11==2.11.1
-    cd $git_dir/loadgen 
+    cd $git_dir/loadgen
     python setup.py install
     cd -;
 }
@@ -120,7 +120,7 @@ setup_furiosa_runtime() {
     fi
     cd furiosa-runtime
     git submodule update --init --recursive
-    git checkout ${COMMIT_HASH}
+    # git checkout ${COMMIT_HASH}
     (cd furiosa-llm-models-artifacts && dvc pull -r origin)
 }
 
@@ -138,12 +138,13 @@ main() {
     local DEFAULT_COMMIT_HASH="ea5957c2929151fe73c263269b5df38b11e324a4"
     local COMMIT_HASH="${1:-$DEFAULT_COMMIT_HASH}"
 
-    install_rust
-    install_packages
-    install_protoc
-    install_cmake
+    # install_rust
+    # install_packages
+    # install_protoc
+    # install_cmake
     setup_conda_env
-    install_dvc
+    # install_dvc
+    install_pip_packages
     setup_furiosa_runtime ${COMMIT_HASH}
     install_furiosa_llm
     echo "Setup complete."

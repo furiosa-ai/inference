@@ -71,7 +71,7 @@ scenario_map = {
 
 def main():
     args = get_args()
-    
+
     sut = None
 
     if not args.network or args.network == "sut":
