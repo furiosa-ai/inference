@@ -1,28 +1,18 @@
 import argparse
 import array
+import json
 import os
-from typing import Dict, List, Tuple
+from dataclasses import dataclass
+from typing import List
 
 import mlperf_loadgen as lg
 import torch
-from backend_PyTorch import SUT_base as PyTorch_SUT_base
-from furiosa_llm_models.gptj.symbolic.mlperf_submission import \
-    GPTJForCausalLM as upstream_GPTJForCausalLM
-from generator_RNGD import (MLPerfSubmissionBeamSearch,
-                            expand_inputs_for_generation)
-from tqdm import tqdm
-from transformers import AutoTokenizer
-from transformers.generation.logits_process import \
-    MinNewTokensLengthLogitsProcessor
-from transformers.generation.stopping_criteria import MaxLengthCriteria
-from transformers.generation.utils import BeamSearchScorer
-from transformers.utils.fx import get_concrete_args
-
-from tests.e2e_pipe import LLMTestCase, prestep_furiosa_llm, Model
 from furiosa_llm import LLMBackend, SamplingParams
 from furiosa_llm.api import KvCacheSharingAcrossBeamsConfig
+from tests.e2e_pipe import LLMTestCase, Model, prestep_furiosa_llm
 from tests.utils import PipelineParallelismMppp
-from dataclasses import dataclass
+from tqdm import tqdm
+from transformers import AutoTokenizer
 
 gen_kwargs = {
     "early_stopping": True,
@@ -42,21 +32,21 @@ NUM_BEAMS = 4
 LENGTH_PENALTY = 1.0
 NUM_RETURN_SEQUENCES = 1
 RETURN_DICT_IN_GENERATE = False
-LOGITS_PROCESSOR = MinNewTokensLengthLogitsProcessor
-STOPPING_CRITERIA = MaxLengthCriteria
-KV_DTYPE = torch.float32
-QUANT_KV_DTYPE = torch.int8
+
 BUCKET_SIZE = 2048
+PREFILL_BUCKET_SIZE = BUCKET_SIZE - MAX_NEW_TOKENS
+TOTAL_NUM_BLOCKS = PREFILL_BUCKET_SIZE + MAX_NEW_TOKENS * NUM_BEAMS
+NUM_PADDING_BLOCKS = 1
 NUM_REAL_BATCH = 1
 
-            
+
 @dataclass
 class GeneratorInputs:
     input_ids: List
     attention_mask: List
 
 
-class SUT_base(PyTorch_SUT_base):
+class SUT_base:
     def __init__(
         self,
         model_path,
@@ -77,41 +67,48 @@ class SUT_base(PyTorch_SUT_base):
         self.max_examples = max_examples
         self.scenario = scenario
         self.qsl = qsl
-        print("Loading PyTorch model...")
+        self.dump_path = args.dump_path
 
-        # dtype
-        if dtype == "bfloat16":
-            self.amp_enabled = True
-            self.amp_dtype = torch.bfloat16
-            print("BF16 autocast")
-        elif dtype == "float16":
-            self.amp_enabled = True
-            self.amp_dtype = torch.float16
-        else:
-            self.amp_enabled = False
-            self.amp_dtype = torch.float32
+        if not str(self.dump_path.stem):
+            self.dump_path = None
         
+        if self.dump_path is not None:
+            if not self.dump_path.exists():
+                with open(self.dump_path, "w") as f:
+                    json.dump([], f)
+        self.dump = {}
+
         self.model = LLMTestCase(
             name="gpt-j-mlperf_submission-accuracy_test",
             model_metadata=Model.GPTJ_6B_28L_MLPERF_QUANTIZED,
             prompts=["dummy unused prompt"],
             sampling_params=SamplingParams(
-                n=1, use_beam_search=True, best_of=4, max_tokens=128, min_tokens=30
+                n=NUM_RETURN_SEQUENCES,
+                use_beam_search=True,
+                best_of=NUM_BEAMS,
+                max_tokens=MAX_NEW_TOKENS,
+                min_tokens=MIN_NEW_TOKENS,
             ),
-            devices="npu:0:0-3, npu:0:0-3",
+            devices=args.device,
             mppp=PipelineParallelismMppp(),
             one_supertask_per_device=True,
             paged_attention_block_size=1,
-            paged_attention_num_blocks=8192*2,
-            prefill_buckets=[(1, 1920)],
-            decode_buckets=[(4, 2048)],
+            # TODO: TOTAL_NUM_BLOCKS * batch_size_in_decode + NUM_PADDING_BLOCKS, ex) (1920 + 128 * 4 + 1) * 1 = 2433
+            paged_attention_num_blocks=8192 * 2,
+            prefill_buckets=[(1, PREFILL_BUCKET_SIZE)],  # (1, 1920)
+            decode_buckets=[
+                (NUM_BEAMS * args.batch_size_in_decode, BUCKET_SIZE)
+            ],  # (4 * 1, 2048) if batch_size_in_decode=1
             kv_cache_sharing_across_beams_config=KvCacheSharingAcrossBeamsConfig(
-                4,
-                128,
-            ),
+                NUM_BEAMS,
+                MAX_NEW_TOKENS,
+            ),  # (4, 128)
             use_blockwise_compile=True,
         )
-        self.generator = prestep_furiosa_llm(self.model, backend=LLMBackend.FURIOSA_RT_V2)
+
+        self.generator = prestep_furiosa_llm(
+            self.model, backend=LLMBackend.FURIOSA_RT_V2
+        )
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_name,
@@ -124,6 +121,35 @@ class SUT_base(PyTorch_SUT_base):
         # construct SUT
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
 
+    def issue_queries(self, query_samples):
+        print("Number of Samples in query_samples : ", len(query_samples))
+        # Pass each query to inference_call function
+        # Activates only when scenario is Offline and network mode is None
+        for i in tqdm(range(len(query_samples))):
+            index = query_samples[i].index
+            input_ids_tensor = self.qsl.data_object.source_encoded_input_ids[index]
+            input_masks_tensor = self.qsl.data_object.source_encoded_attn_masks[index]
+            text = self.qsl.data_object.sources[index]
+            query = {
+                "input_text": text,
+                "input_ids_tensor": input_ids_tensor.tolist(),
+                "input_masks_tensor": input_masks_tensor.tolist(),
+            }
+
+            self.inference_call(query, query_samples[i].id)
+            if self.dump_path:
+                self.dump.update({"qsl_idx": index})
+                self.dump.update({"input": query})
+                self.dump.update({"output": self.response})
+                with open(self.dump_path, "r") as f:
+                    data = json.load(f)
+
+                data.append(self.dump)
+                data = sorted(data, key=lambda x: x["qsl_idx"])
+
+                with open(self.dump_path, "w") as f:
+                    json.dump(data, f)
+
     def inference_call(self, query, query_id=None):
         """Common for all scenarios"""
         torch_device_type = "cuda" if self.use_gpu else "cpu"
@@ -135,57 +161,67 @@ class SUT_base(PyTorch_SUT_base):
         input_ids_tensor = input_ids_tensor.to(torch_device_type)
         input_masks_tensor = input_masks_tensor.to(torch_device_type)
 
-        with torch.inference_mode(), torch.autocast(
-            device_type=torch_device_type,
-            enabled=self.amp_enabled,
-            dtype=self.amp_dtype if self.amp_enabled else None,
-        ):
-            input_batch = dict()
-            input_batch["input_ids"] = input_ids_tensor
-            input_batch["attention_mask"] = input_masks_tensor
+        input_batch = dict()
+        input_batch["input_ids"] = input_ids_tensor
+        input_batch["attention_mask"] = input_masks_tensor
 
-            
-            inputs = GeneratorInputs(input_ids=input_ids_tensor.tolist()[0], attention_mask=input_masks_tensor.tolist()[0])
+        inputs = GeneratorInputs(
+            input_ids=input_ids_tensor.tolist()[0],
+            attention_mask=input_masks_tensor.tolist()[0],
+        )
 
-            output = self.generator.engine.generate(inputs, sampling_params=self.model.sampling_params)
-            output_batch = output.outputs[0].token_ids
-            output_batch = torch.Tensor([output_batch]).to(torch.int64)
+        output = self.generator.engine.generate(
+            inputs, sampling_params=self.model.sampling_params
+        )
+        output_batch = output.outputs[0].token_ids
+        output_batch = torch.Tensor([output_batch]).to(torch.int64)
 
-            input_batch_lengths = [x.shape[0] for x in input_batch["input_ids"]]
+        input_batch_lengths = [x.shape[0] for x in input_batch["input_ids"]]
 
-            output_batch_lengths = [x.shape[0] for x in output_batch]
+        output_batch_lengths = [x.shape[0] for x in output_batch]
 
-            output_batch_truncated = []
-            for data, source_len in zip(output_batch, input_batch_lengths):
-                output_batch_truncated.append(data[source_len:])
+        output_batch_truncated = []
+        for data, source_len in zip(output_batch, input_batch_lengths):
+            output_batch_truncated.append(data[source_len:])
 
-            output_batch_truncated = torch.stack(output_batch_truncated)
+        output_batch_truncated = torch.stack(output_batch_truncated)
 
-            # Loadgen monitors the reponse in corresponding functions
-            if (
-                self.scenario == "SingleStream" or self.scenario == "Server"
-            ) and self.network == None:
-                return output_batch_truncated
+        # Loadgen monitors the reponse in corresponding functions
+        if (
+            self.scenario == "SingleStream" or self.scenario == "Server"
+        ) and self.network == None:
+            return output_batch_truncated
 
-            pred_output_batch = output_batch_truncated.cpu().numpy()
+        pred_output_batch = output_batch_truncated.cpu().numpy()
 
-            decoded_outputs = [
-                self.tokenizer.decode(output, skip_special_tokens=True)
-                for output in pred_output_batch
-            ]
-            response_text = decoded_outputs[0]
+        decoded_outputs = [
+            self.tokenizer.decode(output, skip_special_tokens=True)
+            for output in pred_output_batch
+        ]
+        response_text = decoded_outputs[0]
 
-            # Loadgen monitors the response in GPT_QDL
-            if self.network == "sut":
-                return {
-                    "pred_output_batch": pred_output_batch.tolist(),
-                    "response_text": response_text,
-                }
+        self.response = {
+            "pred_output_batch": pred_output_batch.tolist(),
+            "response_text": response_text,
+        }
 
-            response_array = array.array("B", pred_output_batch[0].tobytes())
-            bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_id, bi[0], bi[1])
-            lg.QuerySamplesComplete([response])
+        # Loadgen monitors the response in GPT_QDL
+        if self.network == "sut":
+            return {
+                "pred_output_batch": pred_output_batch.tolist(),
+                "response_text": response_text,
+            }
+
+        response_array = array.array("B", pred_output_batch[0].tobytes())
+        bi = response_array.buffer_info()
+        response = lg.QuerySampleResponse(query_id, bi[0], bi[1])
+        lg.QuerySamplesComplete([response])
+
+    def flush_queries(self):
+        pass
+
+    def __del__(self):
+        print("Finished destroying SUT.")
 
 
 class SUT_Offline(SUT_base):

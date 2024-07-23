@@ -74,7 +74,7 @@ python $work_dir/accuracy-squad.py --vocab_file=$VOCAB_PATH \
                          --out_file=$LOG_PATH/predictions.json \
                          --max_examples=$N_COUNT \
                          &> $LOG_PATH/accuracy_result.log
-
+cat $LOG_PATH/accuracy_result.log
 printf "Save evaluation log to $LOG_PATH"
 
 unset LOG_PATH

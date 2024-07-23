@@ -1,0 +1,6 @@
+outs:
+- md5: 0c8ce10940d4f5add18f5c6ca868458f.dir
+  size: 7175051982
+  nfiles: 62
+  hash: md5
+  path: gptj
