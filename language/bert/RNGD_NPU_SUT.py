@@ -69,13 +69,14 @@ class BERT_RNGD_NPU_SUT(BERT_PyTorch_SUT):
 
         self.network = args.network
 
-        self.dump_path = args.dump_path
+        # self.dump_path = args.dump_path
+        self.dump_path = None
         # if not self.dump_path.exists():
         #     with open(self.dump_path, "w") as f:
         #         json.dump([], f)
         # self.dump = {}
 
-        print("Loading PyTorch model...\n"*10)
+        print("Loading PyTorch model...")
         self.model = LLMTestCase(
             name="mlperf-bert-submission-blockwise-accuracy_test",
             model_metadata=Model.BERT_LARGE_24L_MLPERF_QUANTIZED,
