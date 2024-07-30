@@ -88,7 +88,8 @@ if [ "$CALIBRATE" = true ]; then
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
-                                     --gpu
+                                     --gpu \
+                                     --save_cache_files
 
 fi
 

@@ -176,6 +176,21 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
                 kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
                 disable_inout=(True, True),
             )
+        
+        if save_cache_files:
+
+            traced_models = model.trace_all()
+            quant_models = quantize_model(traced_models, quant_param_path, quant_format_path,)
+
+            qlv4_prefill_out_path = quant_param_path.replace("quant_param.npy", "prefill.bin")
+            qlv4_decode_out_path = quant_param_path.replace("quant_param.npy", "decode.bin")
+            prefill_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "prefill_graph_patterns.json")
+            decode_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "decode_graph_patterns.json")
+
+            torch.save(quant_models["prefill"].state_dict(), qlv4_prefill_out_path)
+            torch.save(quant_models["decode"].state_dict(), qlv4_decode_out_path)
+            model_compressor.save_graph_patterns(quant_models["prefill"], prefill_rblock_json_out_path)
+            model_compressor.save_graph_patterns(quant_models["decode"], decode_rblock_json_out_path)
 
 
 def get_args():
@@ -204,6 +219,12 @@ def get_args():
         type=int, 
         default=1000,
         help="the number of calibration samples"
+    )
+    parser.add_argument(
+        "--save_cache_files",
+        action="store_true",
+        default=False,
+        help="if true qlv4 state_dict and rblock .json will be saved",
     )
     
  
@@ -257,7 +278,7 @@ def main():
 
 
 
-    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig)  
+    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig, args.save_cache_files)  
 
 
 if __name__ == "__main__":
