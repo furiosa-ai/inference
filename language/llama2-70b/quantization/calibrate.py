@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from torch.nn.functional import pad
 import model_compressor
 from quantization.utils import get_kwargs, random_seed, set_optimization 
+from quantization.quantize import quantize_model
 import gc
 
 # Assume BLOCK_SIZE, NUM_BLOCKS, BUCKET_SIZE are fixed for now.
@@ -149,7 +150,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
     return
 
 
-def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_param_path, quant_format_path, qconfig):
+def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_param_path, quant_format_path, qconfig, save_cache_files):
         
         prefill_model = model_compressor.create_quantsim_model(
             model.trace_prefill(),
