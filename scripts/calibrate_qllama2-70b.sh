@@ -11,7 +11,6 @@ log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 quant_data_dir=$data_dir/quantization/llama2-70b
-tag=MLPerf4.1-v3.13
 quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission/W8A8KV8/80L
 
 
