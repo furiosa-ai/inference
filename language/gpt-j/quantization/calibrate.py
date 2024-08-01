@@ -11,7 +11,7 @@ import model_compressor  # isort:skip
 from dataset import Dataset  # isort:skip
 from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
 from quantization.quantize import quantize_model
-
+from transformers import AutoConfig
 
 def get_autoscale_calib_config(model_script, model, calib_dataloader):
     from quantization.autoscale import extract_kwargs
@@ -30,15 +30,22 @@ def get_autoscale_calib_config(model_script, model, calib_dataloader):
     return autoscale_calib_cfg
 
 
-def load_pytorch_model(model_path, use_gpu):
+def load_pytorch_model(model_path, use_gpu, n_layers):
     from furiosa_llm_models.gptj.symbolic.huggingface_rope_rngd_gelu import GPTJForCausalLM
     
-    model = GPTJForCausalLM.from_pretrained(
+    if n_layers == -1:
+        model = GPTJForCausalLM.from_pretrained(
         model_path,
         device_map="auto" if not use_gpu else None,
         low_cpu_mem_usage=True if not use_gpu else False,
         torch_dtype=torch.float32,
-    )
+        )
+    else:
+        config_exp =  AutoConfig.from_pretrained(model_path)
+        config_exp.n_layer = n_layers
+        model = GPTJForCausalLM.from_pretrained(model_path, config=config_exp)
+
+    
 
     if use_gpu:
         print(f"Casting models to GPU...")
@@ -50,15 +57,21 @@ def load_pytorch_model(model_path, use_gpu):
     model = model.to(memory_format=torch.channels_last)
     return model
 
-def load_mlperf_submission_model(model_path, use_gpu):
+def load_mlperf_submission_model(model_path, use_gpu, n_layers):
     from backend_RNGD import GPTJForCausalLM 
     
-    model = GPTJForCausalLM.from_pretrained(
+    if n_layers == -1:
+        model = GPTJForCausalLM.from_pretrained(
         model_path,
         device_map="auto" if not use_gpu else None,
         low_cpu_mem_usage=True if not use_gpu else False,
         torch_dtype=torch.float32,
-    )
+        )
+    else:
+        config_exp =  AutoConfig.from_pretrained(model_path)
+        config_exp.n_layer = n_layers
+        model = GPTJForCausalLM.from_pretrained(model_path, config=config_exp)
+   
 
     if use_gpu:
         print(f"Casting models to GPU...")
@@ -219,7 +232,9 @@ def get_args():
         default=False,
         help="if true qlv4 state_dict and rblock .json will be saved",
     )
-
+    parser.add_argument(
+        "--n_layers", type=int, default=-1, help="number of layers"
+    )
     args = parser.parse_args()
     return args
 
@@ -227,7 +242,7 @@ def get_args():
 def main():
     args = get_args()
     sut = None
-    golden_model = load_pytorch_model(args.model_path, args.gpu)
+    golden_model = load_pytorch_model(args.model_path, args.gpu, args.n_layers)
 
     random_seed()
     set_optimization(args.torch_numeric_optim)
@@ -243,7 +258,7 @@ def main():
 
     calibrate(golden_model, qconfig, golden_quant_param_path, golden_quant_format_path, dataloader)
     
-    submission_model = load_mlperf_submission_model(args.model_path, args.gpu)
+    submission_model = load_mlperf_submission_model(args.model_path, args.gpu,args.n_layers)
 
     immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig, args.save_cache_files)
 
