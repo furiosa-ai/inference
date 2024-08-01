@@ -418,7 +418,7 @@ class MLPerfSubmissionGreedySearch:
                 for logit_target in single_batch_logit_target_location:
                     # logit target will just be index
                     next_token_logits.append(
-                        single_batch_logit[logit_target]
+                        single_batch_logit[-1]
                     )  # will be [embedding_dimension]
 
             # stack this back to [batch, vocab_size]
