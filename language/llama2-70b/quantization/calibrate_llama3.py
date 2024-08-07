@@ -10,6 +10,8 @@ from quantization.utils import get_kwargs, random_seed, set_optimization
 from quantization.quantize import quantize_model
 
 import gc
+import json
+from transformers import LlamaConfig
 
 # Assume BLOCK_SIZE, NUM_BLOCKS, BUCKET_SIZE are fixed for now.
 BLOCK_SIZE = 1
@@ -23,11 +25,11 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
     amp_dtype = torch.float32
 
     if model_source == 'furiosa_llm_rope':
-        from furiosa_llm_models.llama.symbolic.huggingface_rope import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.huggingface_rope import LlamaForCausalLM
     elif model_source == 'mlperf_submission':
-        from furiosa_llm_models.llama.symbolic.mlperf_submission import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.mlperf_submission import LlamaForCausalLM
     elif model_source == 'mlperf_submission_slice':
-        from furiosa_llm_models.llama.symbolic.mlperf_submission_slice import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.mlperf_submission_slice import LlamaForCausalLM
     else:
         raise ValueError
     
@@ -46,11 +48,17 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
             device = torch.device("cuda:0")
             model.to(device)
     else:
+        CONFIG_PATH = os.path.join(model_path, "config.json")
+        with open(CONFIG_PATH, "r") as f:
+            config_dict = json.load(f)
+        custom_config = LlamaConfig.from_dict(config_dict)
+
         model = LlamaForCausalLM.from_pretrained(
                 model_path,
                 device_map="auto",
                 low_cpu_mem_usage=True,
-                torch_dtype=amp_dtype
+                torch_dtype=amp_dtype,
+                config=custom_config,
             )
 
     print("Loaded model")
@@ -201,7 +209,6 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
 
         torch.save(quant_models["prefill"].state_dict(), qlv4_prefill_out_path)
         torch.save(quant_models["decode"].state_dict(), qlv4_decode_out_path)
-        
         model_compressor.save_graph_patterns(quant_models["prefill"], prefill_rblock_json_out_path)
         model_compressor.save_graph_patterns(quant_models["decode"], decode_rblock_json_out_path)
 
@@ -297,8 +304,7 @@ def main():
 
 
 
-    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig, args.save_cache_files)  
-
+    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig, args.save_cache_files)
 
 if __name__ == "__main__":
     main()
