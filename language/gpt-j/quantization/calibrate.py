@@ -11,6 +11,10 @@ import model_compressor  # isort:skip
 from dataset import Dataset  # isort:skip
 from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
 from quantization.quantize import quantize_model
+import json
+from transformers import GPTJConfig
+
+NUM_HIDDEN_LAYERS = 28
 
 
 def get_autoscale_calib_config(model_script, model, calib_dataloader):
@@ -32,12 +36,19 @@ def get_autoscale_calib_config(model_script, model, calib_dataloader):
 
 def load_pytorch_model(model_path, use_gpu):
     from furiosa_llm_models.gptj.symbolic.huggingface_rope_rngd_gelu import GPTJForCausalLM
+
+    CONFIG_PATH = os.path.join(model_path, "config.json")
+    with open(CONFIG_PATH, "r") as f:
+        config_dict = json.load(f)
+    custom_config = GPTJConfig.from_dict(config_dict)
+    # custom_config.num_hidden_layers = NUM_HIDDEN_LAYERS
     
     model = GPTJForCausalLM.from_pretrained(
         model_path,
         device_map="auto" if not use_gpu else None,
         low_cpu_mem_usage=True if not use_gpu else False,
         torch_dtype=torch.float32,
+        config=custom_config,
     )
 
     if use_gpu:
@@ -51,13 +62,20 @@ def load_pytorch_model(model_path, use_gpu):
     return model
 
 def load_mlperf_submission_model(model_path, use_gpu):
-    from backend_RNGD import GPTJForCausalLM 
+    from backend_RNGD import GPTJForCausalLM
+
+    CONFIG_PATH = os.path.join(model_path, "config.json")
+    with open(CONFIG_PATH, "r") as f:
+        config_dict = json.load(f)
+    custom_config = GPTJConfig.from_dict(config_dict)
+    # custom_config.num_hidden_layers = NUM_HIDDEN_LAYERS
     
     model = GPTJForCausalLM.from_pretrained(
         model_path,
         device_map="auto" if not use_gpu else None,
         low_cpu_mem_usage=True if not use_gpu else False,
         torch_dtype=torch.float32,
+        config=custom_config,
     )
 
     if use_gpu:
