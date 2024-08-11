@@ -52,6 +52,7 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
         with open(CONFIG_PATH, "r") as f:
             config_dict = json.load(f)
         custom_config = LlamaConfig.from_dict(config_dict)
+        # custom_config.num_hidden_layers = 4
 
         model = LlamaForCausalLM.from_pretrained(
                 model_path,
@@ -138,28 +139,20 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
 
     model_compressor.calibrate(
         model,
-        calib_dataloader=calib_dataloader,
+        dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
         model_type = model_type,
         autoscale_calib_kwargs=autoscale_calib_kwargs,
         nodes_excluded_from_auto_scale_calib=nodes_excluded_from_auto_scale_calib,
     )
 
-    model_compressor.save(
-        model,
-        qformat_out_path=qformat_path,
-        qparam_out_path=qparam_path,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
-        kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
-        disable_inout=(True, True),
-        )
+    qformat, qparam = model_compressor.extract_qformat_and_qparam(model)
+    model_compressor.save_qformat_qparam(qformat_dict=qformat,
+                                         qformat_out_path=qformat_path,
+                                         qparam_dict=qparam, 
+                                         qparam_out_path=qparam_path,
+                                         **get_kwargs(model_compressor.save_qformat_qparam, qconfig),
+                                         )
 
     model.cpu()
     del model
@@ -181,21 +174,13 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         immigrate_qparams = True,
     )
 
-    model_compressor.save(
-            prefill_model,
-            qparam_out_path=quant_param_path,
-            qformat_out_path=quant_format_path,
-            weight_calib_method=qconfig["weight_calib_method"],
-            weight_granularity=qconfig["weight_granularity"],
-            weight_dtype=qconfig["weight_dtype"],
-            weight_nbits=qconfig["weight_nbits"],
-            act_calib_method=qconfig["act_calib_method"],
-            act_granularity=qconfig["act_granularity"],
-            act_dtype=qconfig["act_dtype"],
-            act_nbits=qconfig["act_nbits"],
-            kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
-            disable_inout=(True, True),
-            )
+    qformat, qparam = model_compressor.extract_qformat_and_qparam(prefill_model)
+    model_compressor.save_qformat_qparam(qformat_dict=qformat,
+                                         qformat_out_path=quant_format_path,
+                                         qparam_dict=qparam, 
+                                         qparam_out_path=quant_param_path,
+                                         **get_kwargs(model_compressor.save_qformat_qparam, qconfig),
+                                         )
 
     if save_cache_files:
 
@@ -204,13 +189,13 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
 
         qlv4_prefill_out_path = quant_param_path.replace("quant_param.npy", "prefill.bin")
         qlv4_decode_out_path = quant_param_path.replace("quant_param.npy", "decode.bin")
-        prefill_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "prefill_graph_patterns.json")
-        decode_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "decode_graph_patterns.json")
+        # prefill_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "prefill_graph_patterns.json")
+        # decode_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "decode_graph_patterns.json")
 
         torch.save(quant_models["prefill"].state_dict(), qlv4_prefill_out_path)
         torch.save(quant_models["decode"].state_dict(), qlv4_decode_out_path)
-        model_compressor.save_graph_patterns(quant_models["prefill"], prefill_rblock_json_out_path)
-        model_compressor.save_graph_patterns(quant_models["decode"], decode_rblock_json_out_path)
+        # model_compressor.save_graph_patterns(quant_models["prefill"], prefill_rblock_json_out_path)
+        # model_compressor.save_graph_patterns(quant_models["decode"], decode_rblock_json_out_path)
 
 
 def get_args():
