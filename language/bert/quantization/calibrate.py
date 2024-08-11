@@ -138,7 +138,7 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
         rblock_json_out_path = qparam_path.replace("quant_param.npy", "graph_patterns.json")
         torch.save(model.state_dict(), qlv4_prefill_out_path)
         
-        model_compressor.save_graph_patterns(model, rblock_json_out_path)
+        # model_compressor.save_graph_patterns(model, rblock_json_out_path)
 
 
     return
