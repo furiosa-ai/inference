@@ -10,7 +10,7 @@ quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-quant_data_folder=quantized/GPT-J/mlperf_submission_slice/W8A8KV8
+quant_data_folder=quantized/GPT-J/mlperf_submission_slice/W8fA8fKV8f
 # work on model directory
 
 # enter existing conda env.
