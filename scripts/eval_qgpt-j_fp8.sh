@@ -10,7 +10,7 @@ quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-quant_data_folder=quantized/GPT-J/mlperf_submission_slice/W8fA8fKV8f 
+quant_data_dvc_folder=quantized/GPT-J/mlperf_submission_slice/W8fA8fKV8f 
 
 printf "\n============= Download quant_config from furiosa-llm-models artifacts=============\n"
 #Pull quant config files from dvc
@@ -19,19 +19,18 @@ git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
 #Test code
 tag=8b40c8c
-
-
+ 
 git checkout $tag
-dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/quant_config.yaml.dvc -r origin --force
-dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/28L/qformat.yaml.dvc -r origin --force
-dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/28L/qparam.npy.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_folder/quant_config.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_folder/28L/qformat.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_folder/28L/qparam.npy.dvc -r origin --force
 
 mkdir -p $quant_data_dir
 mkdir -p $quant_data_dir/calibration_range
 
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/quant_config.yaml $quant_data_dir/quant_config.yaml
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_folder/quant_config.yaml $quant_data_dir/quant_config.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_folder/28L/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_folder/28L/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
 rm -rf $git_dir/furiosa-llm-models-artifacts
 
 # work on model directory
