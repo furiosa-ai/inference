@@ -23,7 +23,7 @@ cd $git_dir
 git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
 #Test coce
-tag=34e0f53
+tag=8067d93
 
 git checkout $tag
 dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/quant_config.yaml.dvc -r origin --force
