@@ -22,7 +22,7 @@ printf "\n============= Download quant_config from furiosa-llm-models artifacts=
 cd $git_dir
 git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
-#Test code
+#Test coce
 tag=8067d93
 
 git checkout $tag
@@ -32,18 +32,25 @@ mkdir -p $quant_data_dir
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/quant_config.yaml $quant_data_dir/quant_config.yaml
 rm -rf $git_dir/furiosa-llm-models-artifacts
 
+# work on model directory
+cd $work_dir
+
+# enter existing conda env.
+source "$conda_base/etc/profile.d/conda.sh"
+conda activate $env_name
+
 # eval model
 printf "\n============= Run calibration qgpt-j =============\n"
 SCENARIO=${SCENARIO:="Offline"}
 MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-cd $work_dir
+
 # quantization args
 N_CALIB=${N_CALIB:=1000} # total_len=1,000
 N_CALIB=10
 CALIB_DATA_PATH=$data_dir/dataset/cnn-daily-mail/calibration/cnn_dailymail_calibration.json
-QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
+QUANT_CONFIG_PATH=$quant_data_dir/quant_config_fp8.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
 

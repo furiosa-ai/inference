@@ -14,7 +14,10 @@ from quantization.quantize import quantize_model
 import json
 from transformers import GPTJConfig
 
-NUM_HIDDEN_LAYERS = 28
+# NUM_HIDDEN_LAYERS = 1
+# N_EMBD = 32
+# ROTARY_DIM = 2
+# N_INNER = 1
 
 
 def get_autoscale_calib_config(model_script, model, calib_dataloader):
@@ -42,13 +45,17 @@ def load_pytorch_model(model_path, use_gpu):
         config_dict = json.load(f)
     custom_config = GPTJConfig.from_dict(config_dict)
     # custom_config.num_hidden_layers = NUM_HIDDEN_LAYERS
-    
+    # custom_config.n_embb = N_EMBD
+    # custom_config.rotary_dim = ROTARY_DIM
+    # custom_config.n_inner = N_INNER
+
     model = GPTJForCausalLM.from_pretrained(
         model_path,
         device_map="auto" if not use_gpu else None,
         low_cpu_mem_usage=True if not use_gpu else False,
         torch_dtype=torch.float32,
         config=custom_config,
+        ignore_mismatched_sizes=True,
     )
 
     if use_gpu:
@@ -69,13 +76,17 @@ def load_mlperf_submission_model(model_path, use_gpu):
         config_dict = json.load(f)
     custom_config = GPTJConfig.from_dict(config_dict)
     # custom_config.num_hidden_layers = NUM_HIDDEN_LAYERS
-    
+    # custom_config.n_embb = N_EMBD
+    # custom_config.rotary_dim = ROTARY_DIM
+    # custom_config.n_inner = N_INNER
+
     model = GPTJForCausalLM.from_pretrained(
         model_path,
         device_map="auto" if not use_gpu else None,
         low_cpu_mem_usage=True if not use_gpu else False,
         torch_dtype=torch.float32,
         config=custom_config,
+        ignore_mismatched_sizes=True,
     )
 
     if use_gpu:

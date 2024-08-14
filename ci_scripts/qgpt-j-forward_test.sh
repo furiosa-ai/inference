@@ -11,6 +11,25 @@ log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
+quant_data_dvc_dir=quantized/GPT-J/mlperf_submission_slice/W8A8KV8
+
+printf "\n============= STEP-1: Pull dvc data =============\n"
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+cd $git_dir/furiosa-llm-models-artifacts
+#Test code
+tag=8067d93
+git checkout $tag
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml.dvc -r origin --force
+
+
+mkdir -p $quant_data_dir
+mkdir -p $quant_data_dir/calibration_range
+
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
+
+rm -rf $git_dir/furiosa-llm-models-artifacts
+
 # work on model directory
 cd $work_dir
 
