@@ -10,13 +10,35 @@ quant_data_dir=$data_dir/quantization/llama2-70b
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-
+quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8A8KV8
+tag=MLPerf4.1-v4.2
 # work on model directory
 cd $work_dir
 
 # enter existing conda env.
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
+
+#Pull quant config files from dvc
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+cd $git_dir/furiosa-llm-models-artifacts
+#Test code
+tag=MLPerf4.1-v4.2
+ 
+git checkout $tag
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/32L/qformat.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/32L/qparam.npy.dvc -r origin --force
+
+mkdir -p $quant_data_dir
+mkdir -p $quant_data_dir/calibration_range
+
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/80L/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/80L/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+rm -rf $git_dir/furiosa-llm-models-artifacts
+
 
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"

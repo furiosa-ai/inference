@@ -12,7 +12,7 @@ env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 quant_data_dir=$data_dir/quantization/llama2-70b
 tag=MLPerf4.1-v3.13
-quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission/W8A8KV8/80L
+quant_data_dvc_dir=quantized/LLaMA3.1-8B/mlperf_submission_slice/W8A8KV8
 
 
 # work on model directory
@@ -21,6 +21,21 @@ cd $work_dir
 # enter existing conda env.
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
+
+printf "\n============= Download quant_config from furiosa-llm-models artifacts=============\n"
+#Pull quant config files from dvc
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+cd $git_dir/furiosa-llm-models-artifacts
+#Test coce
+tag=8067d93
+
+git checkout $tag
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/quant_config.yaml.dvc -r origin --force
+
+mkdir -p $quant_data_dir
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/quant_config.yaml $quant_data_dir/quant_config.yaml
+rm -rf $git_dir/furiosa-llm-models-artifacts
 
 # eval model
 SCENARIO=${SCENARIO:="Offline"}
@@ -36,7 +51,7 @@ fi
 
 #N_CALIB=${N_CALIB:=1000} # total_len=1,000
 
-export N_CALIB=10 #test code
+export N_CALIB=4 #test code
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 

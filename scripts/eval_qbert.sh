@@ -10,6 +10,8 @@ quant_data_dir=$data_dir/quantization/bert
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
+tag=MLPerf4.1-v4.2
+quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8fA8f
 
 # work on model directory
 cd $work_dir
@@ -17,6 +19,29 @@ cd $work_dir
 # enter existing conda env.
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
+
+
+quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8A8
+printf "\n============= Download quant_config from furiosa-llm-models artifacts=============\n"
+#Pull quant config files from dvc
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+cd $git_dir/furiosa-llm-models-artifacts
+
+git checkout $tag
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qformat.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qparam.npy.dvc -r origin --force
+
+
+mkdir -p $quant_data_dir
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+rm -rf $git_dir/furiosa-llm-models-artifacts
+
+
+
 
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
@@ -28,6 +53,7 @@ VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=${N_COUNT:="10833"} # total_len = 10,833
+N_COUNT=100
 
 # quantization args
 CALIBRATE=${CALIBRATE:=false}
@@ -70,6 +96,7 @@ else
 fi
 
 SECONDS=0
+# N_COUNT=10
 python -m run --scenario=$SCENARIO \
               --backend=$BACKEND \
               --gpu \

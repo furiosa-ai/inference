@@ -28,8 +28,8 @@ mkdir -p $quant_data_dir
 mkdir -p $quant_data_dir/calibration_range
 
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/28L/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
-cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/28L/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/28L/qformat.yaml $quant_data_dir/calibration_range/quant_format_from_dvc.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/28L/qparam.npy $quant_data_dir/calibration_range/quant_param_from_dvc.npy
 rm -rf $git_dir/furiosa-llm-models-artifacts
 
 

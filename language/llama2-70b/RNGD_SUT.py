@@ -10,8 +10,6 @@ from pathlib import Path
 import mlperf_loadgen as lg
 import numpy as np
 import torch
-from furiosa_llm_models.llama.symbolic.mlperf_submission import \
-    LlamaForCausalLM  # isort:skip
 from RNGD_generator import MLPerfSubmissionGreedySearch
 from SUT import SUT as PyTorchSUT
 from SUT import FirstTokenStreamer
@@ -193,6 +191,11 @@ class SUT(PyTorchSUT):
                     print(f"\tLoaded from cache: {_p}")
 
     def load_model(self):
+        if 'llama3' in self.model_path:
+            from furiosa_llm_models.llama3.symbolic.mlperf_submission import LlamaForCausalLM  # isort:skip
+        elif 'llama2' in self.model_path:
+            from furiosa_llm_models.llama.symbolic.mlperf_submission import LlamaForCausalLM  # isort:skip
+            
         self.model = LlamaForCausalLM.from_pretrained(
             self.model_path,
             device_map="auto",

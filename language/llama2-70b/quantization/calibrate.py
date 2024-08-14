@@ -48,11 +48,18 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
             device = torch.device("cuda:0")
             model.to(device)
     else:
+        CONFIG_PATH = os.path.join(model_path, "config.json")
+        with open(CONFIG_PATH, "r") as f:
+            config_dict = json.load(f)
+        custom_config = LlamaConfig.from_dict(config_dict)
+        # custom_config.num_hidden_layers = 4
+
         model = LlamaForCausalLM.from_pretrained(
                 model_path,
                 device_map="auto",
                 low_cpu_mem_usage=True,
-                torch_dtype=amp_dtype
+                torch_dtype=amp_dtype,
+                config=custom_config,
             )
 
     print("Loaded model")
