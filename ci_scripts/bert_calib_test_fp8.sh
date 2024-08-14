@@ -11,7 +11,7 @@ log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 tag=MLPerf4.1-v4.2
-quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8A8KV8
+quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8fA8f
 # work on model directory
 cd $work_dir
 
