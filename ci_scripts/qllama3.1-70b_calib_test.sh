@@ -62,10 +62,6 @@ mkdir -p $LOG_PATH/calibration_range
 
 printf "\n============= STEP-1: Pull dvc data =============\n"
 pip install dvc[s3]
-dvc pull $data_dir/quantization/llama2-70b.dvc --force
-
-cd $git_dir
-git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
 
 git checkout $tag

@@ -18,16 +18,16 @@ cd $work_dir
 # enter existing conda env.
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
-
-cd $git_dir
-git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+pip install dvc[s3]
+# cd $git_dir
+# git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
 
 git checkout $tag
 dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml.dvc -r origin --force
 mkdir -p $quant_data_dir
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
-rm -rf $git_dir/furiosa-llm-models-artifacts
+# rm -rf $git_dir/furiosa-llm-models-artifacts
 
 
 # eval model
