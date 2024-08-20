@@ -36,8 +36,8 @@ CALIBRATE=${CALIBRATE:=false}
 N_CALIB=${N_CALIB:=1000} # total_len=1,000
 CALIB_DATA_PATH=$data_dir/dataset/cnn-daily-mail/calibration/cnn_dailymail_calibration.json
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
-QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
-QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
+QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_golden.npy
+QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format_golden.yaml
 
 
 printf "<<EVAL_CONFIG>>\n"
