@@ -8,7 +8,7 @@ from .utils import get_kwargs  # isort:skip
 
 
 TARGET_MACHINE = 'RGDA0'
-QLEVEL = 2
+QLEVEL = 4
 
 def _quantize(
     model: GraphModule,
