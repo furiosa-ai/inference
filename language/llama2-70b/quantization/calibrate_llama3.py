@@ -78,11 +78,14 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
 def make_calib_dataloader(model, data_path, batch_size, n_calib,):
     if not os.path.isfile(data_path):
         print("Calibration dataset {} not found. Please check that the path is correct".format(data_path))
+
+    import pickle
+
+    with open(data_path, 'rb') as f:
+        loaded_tensor = pickle.load(f)
     
-    import pandas as pd
-    calib_dataset = pd.read_pickle(data_path)
-    
-    input_tokens = calib_dataset['tok_input']
+    input_tokens = loaded_tensor
+
     max_length = 2048
     
     data_list = []
@@ -126,6 +129,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         model,
         dataloader=calib_dataloader,
         disable_inout=(True, True),
+        set_pow_dtype_to_bf16=True,
         **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 

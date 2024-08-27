@@ -37,7 +37,7 @@ fi
 #N_CALIB=${N_CALIB:=1000} # total_len=1,000
 
 export N_CALIB=10 #test code
-CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
+CALIB_DATA_PATH='/home/home-mcl/sunghyuck/inference/mgoin_ultrachat_2k_calibration_128.pkl'
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 
 printf "<<EVAL_CONFIG>>\n"
