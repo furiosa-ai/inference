@@ -29,7 +29,8 @@ jobs:
 
       - name: Clone furiosa-llm-models:${{ env.FURIOSA_LLM_MODELS_TAG }} repository
         run: |
-          git clone --tag ${{ env.FURIOSA_LLM_MODELS_TAG }} https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git ./furiosa-llm-models
+          echo ${ {env.FURIOSA_LLM_MODELS_TAG }}
+          git clone --branch ${{ env.FURIOSA_LLM_MODELS_TAG }} https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git ./furiosa-llm-models
           pwd
 
       - name: Install dependencies
