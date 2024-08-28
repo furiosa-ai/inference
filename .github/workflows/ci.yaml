@@ -51,7 +51,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          sleep 1
+          sleep 10
           pwd
           cd inference/model-compression-private
           pip install -e .
