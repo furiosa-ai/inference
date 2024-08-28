@@ -17,27 +17,37 @@ jobs:
         uses: kphilpark/pr-issue-info@v1
         id: comment-branch
 
-      - name: Clone MCP:${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }} repository
+      - name: Checkout current PR
         uses: actions/checkout@v4
         with:
-          repository: furiosa-ai/model-compressor-private
-          ref: ${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }}
-          token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
-          path: inference/model-compressor-private
+          ref: ${{ steps.comment-branch.outputs.head_sha }}
+          path: inference
+
+      - name: Clone MCP:${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }} repository
+        run: |
+          git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/model-compressor-private.git inference/model-compressor-private
+        # uses: actions/checkout@v4
+        # with:
+        #   repository: furiosa-ai/model-compressor-private
+        #   ref: ${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }}
+        #   token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
+        #   path: inference/model-compressor-private
 
       - name: Clone furiosa-llm-models:${{ env.FURIOSA_LLM_MODELS_TAG }} repository
-        uses: actions/checkout@v4
-        with:
-          repository: furiosa-ai/furiosa-llm-models
-          ref: ${{ env.FURIOSA_LLM_MODELS_TAG }}
-          token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
-          path: inference/furiosa-llm-models
+        run: |
+          git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git inference/furiosa-llm-models
+        # uses: actions/checkout@v4
+        # with:
+        #   repository: furiosa-ai/furiosa-llm-models
+        #   ref: ${{ env.FURIOSA_LLM_MODELS_TAG }}
+        #   token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
+        #   path: inference/furiosa-llm-models
       
-      - name: Checkout latest PR commit
-        uses: actions/checkout@v4
-        with:
-          path: inference
-          ref: ${{ steps.comment-branch.outputs.head_sha }}
+      # - name: Checkout latest PR commit
+      #   uses: actions/checkout@v4
+      #   with:
+      #     path: inference
+      #     ref: ${{ steps.comment-branch.outputs.head_sha }}
       
       - name: Install dependencies
         run: |
