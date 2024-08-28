@@ -26,6 +26,7 @@ jobs:
       - name: Clone MCP:${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }} repository
         run: |
           git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/model-compressor-private.git inference/model-compressor-private
+          pwd
         # uses: actions/checkout@v4
         # with:
         #   repository: furiosa-ai/model-compressor-private
@@ -36,6 +37,7 @@ jobs:
       - name: Clone furiosa-llm-models:${{ env.FURIOSA_LLM_MODELS_TAG }} repository
         run: |
           git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git inference/furiosa-llm-models
+          pwd
         # uses: actions/checkout@v4
         # with:
         #   repository: furiosa-ai/furiosa-llm-models
