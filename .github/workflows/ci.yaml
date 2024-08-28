@@ -55,7 +55,7 @@ jobs:
         run: |
           sleep 10
           pwd
-          cd inference/model-compression-private
+          cd ../../inference/model-compression-private
           pip install -e .
           pwd
           cd ../furiosa-llm-models
