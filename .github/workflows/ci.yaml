@@ -37,12 +37,12 @@ jobs:
         run: |
           cd /home/home-mcl/phil/actions-runner/_work/inference/inference/model-compressor-private
           pip install -e .
-          git symbolic-ref -q --short HEAD || git describe --tags --exact-match || git rev-parse --short HEAD
           pwd
+          git rev-parse HEAD
           cd /home/home-mcl/phil/actions-runner/_work/inference/inference/furiosa-llm-models
           pip install -e .
           pwd
-          git symbolic-ref -q --short HEAD || git describe --tags --exact-match || git rev-parse --short HEAD
+          git rev-parse HEAD
           pip list | grep model
       
       # - name: Run MLPerf FX Graph test on GPU A6000 [0]
