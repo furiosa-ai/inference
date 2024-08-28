@@ -52,13 +52,12 @@ jobs:
       
       - name: Install dependencies
         run: |
-          sleep 10
-          pwd
-          cd ./model-compression-private
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/model-compressor-private
           pip install -e .
           pwd
-          cd ../furiosa-llm-models
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/furiosa-llm-models
           pip install -e .
+          pwd
       #
       # - name: Run MLPerf FX Graph test on GPU A6000 [0]
       #   if: ${{ ! contains(github.event.comment.body, '/skip_ci') }}
