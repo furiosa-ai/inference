@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: |
           pwd
-          cd ./model-compression-private
+          cd inference/model-compression-private
           pip install -e .
           pwd
           cd ../furiosa-llm-models
