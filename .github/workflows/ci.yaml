@@ -23,7 +23,7 @@ jobs:
           repository: furiosa-ai/model-compressor-private
           ref: ${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }}
           token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
-          path: model-compressor-private
+          path: inference/model-compressor-private
 
       - name: Clone furiosa-llm-models:${{ env.FURIOSA_LLM_MODELS_TAG }} repository
         uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
           repository: furiosa-ai/furiosa-llm-models
           ref: ${{ env.FURIOSA_LLM_MODELS_TAG }}
           token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
-          path: furiosa-llm-models
+          path: inference/furiosa-llm-models
       
       - name: Checkout latest PR commit
         uses: actions/checkout@v4
