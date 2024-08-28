@@ -58,6 +58,7 @@ jobs:
           cd /home/home-mcl/phil/actions-runner/_work/inference/inference/furiosa-llm-models
           pip install -e .
           pwd
+          pip list | grep model
       #
       # - name: Run MLPerf FX Graph test on GPU A6000 [0]
       #   if: ${{ ! contains(github.event.comment.body, '/skip_ci') }}
