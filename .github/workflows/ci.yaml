@@ -26,40 +26,25 @@ jobs:
         run: |
           git clone --branch ${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }} https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/model-compressor-private.git ./model-compressor-private
           pwd
-        # uses: actions/checkout@v4
-        # with:
-        #   repository: furiosa-ai/model-compressor-private
-        #   ref: ${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }}
-        #   token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
-        #   path: inference/model-compressor-private
 
       - name: Clone furiosa-llm-models:${{ env.FURIOSA_LLM_MODELS_TAG }} repository
         run: |
           git clone --branch ${{ env.FURIOSA_LLM_MODELS_TAG }} https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git ./furiosa-llm-models
           pwd
-        # uses: actions/checkout@v4
-        # with:
-        #   repository: furiosa-ai/furiosa-llm-models
-        #   ref: ${{ env.FURIOSA_LLM_MODELS_TAG }}
-        #   token: ${{ secrets.ORGANIZATION_REPO_TOKEN }}
-        #   path: inference/furiosa-llm-models
-      
-      # - name: Checkout latest PR commit
-      #   uses: actions/checkout@v4
-      #   with:
-      #     path: inference
-      #     ref: ${{ steps.comment-branch.outputs.head_sha }}
-      
+
       - name: Install dependencies
         run: |
           cd /home/home-mcl/phil/actions-runner/_work/inference/inference/model-compressor-private
           pip install -e .
+          git branch --show-current
+
           pwd
           cd /home/home-mcl/phil/actions-runner/_work/inference/inference/furiosa-llm-models
           pip install -e .
           pwd
+          git branch --show-current
           pip list | grep model
-      #
+      
       # - name: Run MLPerf FX Graph test on GPU A6000 [0]
       #   if: ${{ ! contains(github.event.comment.body, '/skip_ci') }}
       #   id: run-fxgraph-test
