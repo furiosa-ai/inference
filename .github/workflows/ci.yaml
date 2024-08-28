@@ -21,11 +21,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.comment-branch.outputs.head_sha }}
-          path: inference
 
       - name: Clone MCP:${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }} repository
         run: |
-          git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/model-compressor-private.git inference/model-compressor-private
+          git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/model-compressor-private.git ./model-compressor-private
           pwd
         # uses: actions/checkout@v4
         # with:
@@ -36,7 +35,7 @@ jobs:
 
       - name: Clone furiosa-llm-models:${{ env.FURIOSA_LLM_MODELS_TAG }} repository
         run: |
-          git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git inference/furiosa-llm-models
+          git clone https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git ./furiosa-llm-models
           pwd
         # uses: actions/checkout@v4
         # with:
@@ -55,7 +54,7 @@ jobs:
         run: |
           sleep 10
           pwd
-          cd ../../inference/model-compression-private
+          cd ./model-compression-private
           pip install -e .
           pwd
           cd ../furiosa-llm-models
