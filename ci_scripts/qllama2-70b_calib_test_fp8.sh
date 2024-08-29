@@ -12,9 +12,7 @@ env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 quant_data_dir=$data_dir/quantization/llama2-70b
 tag=MLPerf4.1-v4.2
-quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8A8KV8
-
-
+quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8fA8fKV8f
 
 
 # work on model directory
@@ -62,8 +60,6 @@ mkdir -p $LOG_PATH/calibration_range
 
 printf "\n============= STEP-1: Pull dvc data =============\n"
 pip install dvc[s3]
-dvc pull $data_dir/quantization/llama2-70b.dvc --force
-
 cd $git_dir/furiosa-llm-models-artifacts
 
 git checkout $tag

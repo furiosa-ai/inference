@@ -12,7 +12,7 @@ env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 quant_data_dir=$data_dir/quantization/llama2-70b
 tag=MLPerf4.1-v4.2
-quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8A8KV8
+quant_data_dvc_dir=quantized/LLaMA3.1-70B/mlperf_submission_slice/W8A8KV8
 
 
 
@@ -52,7 +52,7 @@ printf "\tDEVICE: $DEVICE\n"
 printf "\tNUM_CALIB_DATA: $N_CALIB\n"
 
 
-CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
+CHECKPOINT_PATH=$data_dir/models/llama3/Meta-Llama-3.1-70B-Instruct
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
 LOG_PATH=$log_dir/$model_name/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
 
@@ -62,8 +62,6 @@ mkdir -p $LOG_PATH/calibration_range
 
 printf "\n============= STEP-1: Pull dvc data =============\n"
 pip install dvc[s3]
-dvc pull $data_dir/quantization/llama2-70b.dvc --force
-
 cd $git_dir/furiosa-llm-models-artifacts
 
 git checkout $tag
@@ -77,7 +75,7 @@ mkdir -p $quant_data_dir/calibration_range
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/80L/qformat.yaml $quant_data_dir/calibration_range/quant_format_from_dvc.yaml
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/80L/qparam.npy $quant_data_dir/calibration_range/quant_param_from_dvc.npy
-
+rm -rf $git_dir/furiosa-llm-models-artifacts
 
 RELEASED_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_from_dvc.npy
 SUBMISSION_MODEL_SOURCE="mlperf_submission_slice"

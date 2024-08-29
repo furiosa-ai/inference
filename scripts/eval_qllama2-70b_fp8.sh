@@ -10,7 +10,7 @@ quant_data_dir=$data_dir/quantization/llama2-70b
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8A8KV8
+quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8fA8fKV8f
 tag=MLPerf4.1-v4.2
 # work on model directory
 cd $work_dir

@@ -11,7 +11,7 @@ log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 tag=MLPerf4.1-v4.2
-quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8A8KV8
+quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8fA8f
 
 
 # enter existing conda env.
@@ -35,7 +35,8 @@ cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qformat.yaml $q
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qparam.npy $quant_data_dir/calibration_range/quant_param_from_dvc.npy
 
 
-
+# work on model directory
+cd $work_dir
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:=Offline}

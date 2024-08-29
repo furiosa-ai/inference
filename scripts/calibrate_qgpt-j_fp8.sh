@@ -10,7 +10,7 @@ quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-quant_data_folder=quantized/GPT-J/mlperf_submission_slice/W8A8KV8
+quant_data_folder=quantized/GPT-J/mlperf_submission_slice/W8fA8fKV8f
 # work on model directory
 
 # enter existing conda env.
@@ -32,20 +32,13 @@ mkdir -p $quant_data_dir
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_folder/quant_config.yaml $quant_data_dir/quant_config.yaml
 rm -rf $git_dir/furiosa-llm-models-artifacts
 
-# work on model directory
-cd $work_dir
-
-# enter existing conda env.
-source "$conda_base/etc/profile.d/conda.sh"
-conda activate $env_name
-
 # eval model
 printf "\n============= Run calibration qgpt-j =============\n"
 SCENARIO=${SCENARIO:="Offline"}
 MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-
+cd $work_dir
 # quantization args
 N_CALIB=${N_CALIB:=1000} # total_len=1,000
 N_CALIB=10

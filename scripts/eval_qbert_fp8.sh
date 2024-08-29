@@ -37,7 +37,8 @@ mkdir -p $quant_data_dir
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/24L/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
-# rm -rf $git_dir/furiosa-llm-models-artifacts
+
+
 
 # work on model directory
 cd $work_dir

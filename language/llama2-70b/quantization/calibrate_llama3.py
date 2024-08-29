@@ -25,11 +25,11 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
     amp_dtype = torch.float32
 
     if model_source == 'furiosa_llm_rope':
-        from furiosa_llm_models.llama.symbolic.huggingface_rope import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.huggingface_rope import LlamaForCausalLM
     elif model_source == 'mlperf_submission':
-        from furiosa_llm_models.llama.symbolic.mlperf_submission import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.mlperf_submission import LlamaForCausalLM
     elif model_source == 'mlperf_submission_slice':
-        from furiosa_llm_models.llama.symbolic.mlperf_submission_slice import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.mlperf_submission_slice import LlamaForCausalLM
     else:
         raise ValueError
     

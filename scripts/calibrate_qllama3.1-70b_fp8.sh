@@ -11,23 +11,17 @@ log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 quant_data_dir=$data_dir/quantization/llama2-70b
-tag=MLPerf4.1-v4.2
-quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8A8KV8
-
-
-# work on model directory
-cd $work_dir
-
-# enter existing conda env.
-source "$conda_base/etc/profile.d/conda.sh"
-conda activate $env_name
-
+tag=MLPerf4.1-v3.13
+quant_data_dvc_dir=quantized/LLaMA3.1-70B/mlperf_submission_slice/W8fA8fKV8f
+quant_data_dir=$data_dir/quantization/llama2-70b
 
 printf "\n============= Download quant_config from furiosa-llm-models artifacts=============\n"
 #Pull quant config files from dvc
 cd $git_dir
 git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
 cd $git_dir/furiosa-llm-models-artifacts
+#Test coce
+tag=3d04e6b
 
 git checkout $tag
 dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml.dvc -r origin --force
@@ -35,6 +29,13 @@ dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.
 mkdir -p $quant_data_dir
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
 rm -rf $git_dir/furiosa-llm-models-artifacts
+
+# work on model directory
+cd $work_dir
+
+# enter existing conda env.
+source "$conda_base/etc/profile.d/conda.sh"
+conda activate $env_name
 
 # eval model
 SCENARIO=${SCENARIO:="Offline"}
@@ -50,7 +51,7 @@ fi
 
 #N_CALIB=${N_CALIB:=1000} # total_len=1,000
 
-export N_CALIB=4 #test code
+export N_CALIB=10 #test code
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 
@@ -62,9 +63,10 @@ printf "\tDEVICE: $DEVICE\n"
 printf "\tNUM_CALIB_DATA: $N_CALIB\n"
 
 
-CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
+CHECKPOINT_PATH=$data_dir/models/llama3/Meta-Llama-3.1-70B-Instruct
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
-LOG_PATH=$log_dir/$model_name/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$log_dir/qllama3.1-70b/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
+SUBMISSION_MODEL_SOURCE="mlperf_submission_slice"
 
 export LOG_PATH
 
@@ -74,15 +76,16 @@ mkdir -p $LOG_PATH/calibration_range
 printf "\n============= STEP-1: Run calibration =============\n"
 # work on model directory
 cd $work_dir
-QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
-QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
+QUANT_PARAM_PATH=$LOG_PATH/calibration_range/llama3.1-70B-quant_param.npy
+QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/llama3.1-70B-quant_format.yaml
 
-python -m quantization.calibrate --model_path=$CHECKPOINT_PATH \
+python -m quantization.calibrate_llama3 --model_path=$CHECKPOINT_PATH \
                                     --quant_config_path=$QUANT_CONFIG_PATH \
                                     --quant_param_path=$QUANT_PARAM_PATH \
                                     --quant_format_path=$QUANT_FORMAT_PATH \
                                     --calib_data_path=$CALIB_DATA_PATH \
                                     --n_calib=$N_CALIB \
+                                    --submission_model_source=$SUBMISSION_MODEL_SOURCE \
                                     --gpu \
                                     --save_cache_files
 

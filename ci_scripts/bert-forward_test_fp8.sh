@@ -11,25 +11,24 @@ log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 tag=MLPerf4.1-v4.2
-quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8A8
-# work on model directory
-cd $work_dir
+quant_data_dvc_dir=quantized/BERT-large/mlperf_submission/W8fA8f
+
 
 # enter existing conda env.
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
-pip install dvc[s3]
-# cd $git_dir
-# git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+
+
 cd $git_dir/furiosa-llm-models-artifacts
 
 git checkout $tag
 dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml.dvc -r origin --force
 mkdir -p $quant_data_dir
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
-# rm -rf $git_dir/furiosa-llm-models-artifacts
 
 
+# work on model directory
+cd $work_dir
 # eval model
 printf "\n============= STEP-1: Run calibration =============\n"
 SCENARIO=${SCENARIO:="Offline"}

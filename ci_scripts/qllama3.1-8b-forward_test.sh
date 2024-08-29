@@ -9,9 +9,10 @@ quant_data_dir=$data_dir/quantization/llama2-70b
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission_slice/W8A8KV8
-tag=MLPerf4.1-v4.2
+quant_data_dvc_dir=quantized/LLaMA3.1-8B/mlperf_submission_slice/W8A8KV8
 
+# work on model directory
+cd $work_dir
 
 # enter existing conda env.
 source "$conda_base/etc/profile.d/conda.sh"
@@ -28,8 +29,6 @@ mkdir -p $quant_data_dir
 cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/quant_config.yaml $quant_data_dir/quant_config.yaml
 
 
-# work on model directory
-cd $work_dir
 # eval model
 SCENARIO=${SCENARIO:="Offline"}
 BACKEND="rngd"
@@ -56,7 +55,7 @@ printf "\tNUM_EVAL_DATA: $N_DATA\n"
 printf "\tCALIBRATE: $CALIBRATE\n"
 printf "\tDEVICE: $DEVICE\n"
 
-CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
+CHECKPOINT_PATH=$data_dir/models/llama3/Meta-Llama-3.1-8B-Instruct
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
 LOG_PATH=$log_dir/$model_name/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
 SUBMISSION_MODEL_SOURCE="mlperf_submission_slice"
