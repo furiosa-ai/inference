@@ -230,7 +230,7 @@ def main():
     sut = None
     golden_model = load_pytorch_model(args.model_path, args.gpu)
 
-    random_seed()
+    random_seed() # todos
     set_optimization(args.torch_numeric_optim)
 
     with open(args.quant_config_path, "r") as f:
