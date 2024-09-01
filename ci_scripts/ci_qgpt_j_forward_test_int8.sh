@@ -7,7 +7,7 @@ git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
 data_dir=/home/home-mcl/phil/actions-runner/_work/data
 REF_PATH=/home/home-mcl/phil/actions-runner/_work/data/quantization/gpt-j/ref
-RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/gpt-j/ci_file/results
+RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
 quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
@@ -81,6 +81,7 @@ python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
                                                 --gpu \
                                                 --ref_path=$REF_PATH\
                                                 --res_path=$RES_PATH\
+                                                # --update_gen_list #정답지 업데이트용 argument
 
 
                                             
@@ -92,7 +93,6 @@ unset N_CALIB
 unset N_DATA
 
 printf "\n============= End of Forward Test for QGPT-J =============\n"
-
 
 # get back to git root
 cd $git_dir

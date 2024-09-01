@@ -302,23 +302,23 @@ def compare_model_outputs(args):
             use_fast=False,
         )
 
-    golden_model_generator = get_generator_for_golden_model(args.model_path,
-                                                        args.quant_config_path, 
-                                                        args.golden_quant_param_path, 
-                                                        args.golden_quant_format_path, 
-                                                        args.gpu,
-                                                        args.n_layers,
-                                                        args.logit_folder_path,
-                                                        args.mcp_dumping_on,)
+    # golden_model_generator = get_generator_for_golden_model(args.model_path,
+    #                                                     args.quant_config_path, 
+    #                                                     args.golden_quant_param_path, 
+    #                                                     args.golden_quant_format_path, 
+    #                                                     args.gpu,
+    #                                                     args.n_layers,
+    #                                                     args.logit_folder_path,
+    #                                                     args.mcp_dumping_on,)
 
 
 
-    golden_generation_result_file_path = args.generation_result_folder_path + '/golden_generation_output.yaml'
+    # golden_generation_result_file_path = args.generation_result_folder_path + '/golden_generation_output.yaml'
 
-    perform_generation(golden_model_generator, test_data_list, args.logit_folder_path, golden_generation_result_file_path, tokenizer)
+    # perform_generation(golden_model_generator, test_data_list, args.logit_folder_path, golden_generation_result_file_path, tokenizer)
 
-    del golden_model_generator
-    gc.collect()
+    # del golden_model_generator
+    # gc.collect()
     
     submission_model_generator = get_generator_for_submission_model(args.model_path,
                                                         args.quant_config_path, 

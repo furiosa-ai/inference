@@ -251,9 +251,7 @@ def generate_compare_gen_token(
         generated_token = output_batch[0][len(input_ids_tensor[0]) :]
         gen_sentence = tokenizer.decode(generated_token, skip_special_tokens=True)
         if update_gen_list:
-            inp_decoded_text = tokenizer.decode(
-                input_ids_tensor[0], skip_special_tokens=True
-            )
+            inp_decoded_text = tokenizer.decode(input_ids_tensor[0], skip_special_tokens=True)
             generated_data = {"inp_text": inp_decoded_text, "gen_text": gen_sentence}
             generated_data_list.append(generated_data)
         print(f"생성 토큰 문장 {idx}: {gen_sentence}")
@@ -264,11 +262,11 @@ def generate_compare_gen_token(
     compare_results_path = res_path + "/qgpt_j_compare_result.json"
     with open(compare_results_path, "w") as file:
         json.dump(results, file, indent=4)
-        print("토큰 동치비교 결과가 저장되었습니다.")
+        print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
     if update_gen_list:
         with open(update_ref_path, "w") as file:
             json.dump(generated_data_list, file, indent=4)
-        print("새로운 토큰 결과로 reference가 업데이트 되었습니다.")
+        print(f"새로운 토큰 결과로 reference가 업데이트 되었습니다. dir: {update_ref_path}")
     return result_flag
 
 
