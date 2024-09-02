@@ -11,16 +11,14 @@ quant_data_dir=$data_dir/quantization/llama2-70b
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 
-printf "\n============= STEP-0: Build libs =============\n"
-pip uninstall transformers
-pip uninstall accelerate
-pip install git+https://github.com/furiosa-ai/transformers-comp.git@2b012fcf15006e2cb2b0d9735ebf5b1d08a744a8#egg=transformers
-pip install git+https://github.com/furiosa-ai/accelerate-compression.git@4d7b404041834d35727064e5b1dcfcd060319ad6#egg=accelerate
 
 # work on model directory
 cd $work_dir
 
-
+# enter existing conda env.
+conda_base=$($CONDA_EXE info --base)
+source "$conda_base/etc/profile.d/conda.sh"
+conda activate inference-ci
 
 printf "\n============= STEP-1: Run calibration =============\n"
 # eval model
@@ -111,6 +109,8 @@ unset CALIBRATE
 unset N_CALIB
 unset N_DATA
 
+# exit from conda env.
+conda deactivate
 
 # get back to git root
 cd $git_dir

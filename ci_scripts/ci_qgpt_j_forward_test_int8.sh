@@ -15,6 +15,11 @@ env_name=mlperf-$model_name
 # work on model directory
 cd $work_dir
 
+# enter existing conda env.
+conda_base=$($CONDA_EXE info --base)
+source "$conda_base/etc/profile.d/conda.sh"
+conda activate inference-ci
+
 # eval model
 printf "\n============= STEP-1: Run calibration =============\n"
 SCENARIO=${SCENARIO:="Offline"}
@@ -93,6 +98,9 @@ unset N_CALIB
 unset N_DATA
 
 printf "\n============= End of Forward Test for QGPT-J =============\n"
+
+# exit from conda env.
+conda deactivate
 
 # get back to git root
 cd $git_dir

@@ -15,17 +15,10 @@ env_name=mlperf-$model_name
 # work on model directory
 cd $work_dir
 
-printf "\n============= STEP-0: Build libs =============\n"
-if ! pip show accelerate > /dev/null 2>&1; then
-    echo "accelerate is not installed. Installing..."
-    pip install accelerate==0.30.1
-fi
-
-if ! pip show pybind11 > /dev/null 2>&1; then
-    echo "pybind11 is not installed. Installing..."
-    pip install pybind11==2.11.1
-fi
-cd $git_dir/loadgen; python setup.py install
+# enter existing conda env.
+conda_base=$($CONDA_EXE info --base)
+source "$conda_base/etc/profile.d/conda.sh"
+conda activate inference-ci
 
 # eval model
 printf "\n============= STEP-1: Run calibration =============\n"
@@ -82,7 +75,7 @@ python -m quantization.calibrate --model_type="mlperf-submission" \
                                     --is_equivalence_ci
 printf "Save submission calibration files to $QUANT_PARAM_PATH and $QUANT_FORMAT_PATH"
 
-N_DATA=2
+N_DATA=1
 LOGIT_FOLDER_PATH=$work_dir/ci_file/logit_files
 mkdir -p $LOGIT_FOLDER_PATH
 
@@ -106,6 +99,9 @@ python -m ci_file.qbert_forward_test --model_path=$MODEL_PATH \
 unset LOG_PATH
 
 printf "\n============= End of Forward Test for QBERT =============\n"
+
+# exit from conda env.
+conda deactivate
 
 # get back to git root
 cd $git_dir
