@@ -5,15 +5,24 @@ model_dir=language/llama2-70b
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
 data_dir=/home/home-mcl/phil/actions-runner/_work/data
-REF_PATH=/home/home-mcl/phil/actions-runner/_work/data/quantization/gpt-j/ref
+REF_PATH=/home/home-mcl/phil/actions-runner/_work/data/quantization/llama2-70b/ref
 RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
 quant_data_dir=$data_dir/quantization/llama2-70b
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 
+printf "\n============= STEP-0: Build libs =============\n"
+pip uninstall transformers
+pip uninstall accelerate
+pip install git+https://github.com/furiosa-ai/transformers-comp.git@2b012fcf15006e2cb2b0d9735ebf5b1d08a744a8#egg=transformers
+pip install git+https://github.com/furiosa-ai/accelerate-compression.git@4d7b404041834d35727064e5b1dcfcd060319ad6#egg=accelerate
+
 # work on model directory
 cd $work_dir
 
+
+
+printf "\n============= STEP-1: Run calibration =============\n"
 # eval model
 SCENARIO=${SCENARIO:="Offline"}
 BACKEND="rngd"
@@ -84,8 +93,10 @@ python -m ci_file.qllama2_70b_forward_test  --model_path=$CHECKPOINT_PATH \
                                             --logit_folder_path=$LOGIT_FOLDER_PATH \
                                             --gpu \
                                             --mcp_dumping_on \
-                                            --generation_result_folder_path=$OUTPUT_FOLDER_PATH
-                                            
+                                            --generation_result_folder_path=$OUTPUT_FOLDER_PATH\
+                                            --ref_path REF_PATH\
+                                            --res_path RES_PATH\
+                                            --update_gen_list
 
 
 printf "\n============= End of Forward Test for Qllama2-70b =============\n"

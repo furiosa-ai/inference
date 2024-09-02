@@ -15,6 +15,18 @@ env_name=mlperf-$model_name
 # work on model directory
 cd $work_dir
 
+printf "\n============= STEP-0: Build libs =============\n"
+if ! pip show accelerate > /dev/null 2>&1; then
+    echo "accelerate is not installed. Installing..."
+    pip install accelerate==0.30.1
+fi
+
+if ! pip show pybind11 > /dev/null 2>&1; then
+    echo "pybind11 is not installed. Installing..."
+    pip install pybind11==2.11.1
+fi
+cd $git_dir/loadgen; python setup.py install
+
 # eval model
 printf "\n============= STEP-1: Run calibration =============\n"
 SCENARIO=${SCENARIO:="Offline"}
