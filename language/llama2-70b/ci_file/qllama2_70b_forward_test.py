@@ -1,4 +1,5 @@
 import argparse
+import difflib
 import gc
 import json
 import pickle
@@ -50,10 +51,39 @@ gen_kwargs = {
     "do_sample": False,
 }
 
+def check_diff(idx, ref_sentence, gen_sentence, results, result_flag):
+    if ref_sentence == gen_sentence:
+        results.append(
+            {
+                "index": idx,
+                "status": "PASS",
+                "generated_sentence": gen_sentence,
+                "reference_sentence": ref_sentence,
+            }
+        )
+    else:
+        result_flag = False
+        diff = list(
+            difflib.unified_diff(
+                ref_sentence.split(), gen_sentence.split(), lineterm=""
+            )
+        )
+        diff_result = " ".join(diff) 
+        results.append(
+            {
+                "index": idx,
+                "status": "DIFFERENT",
+                "reference_sentence": ref_sentence,
+                "generated_sentence": gen_sentence,
+                "differences": diff_result,
+            }
+        )
+    return result_flag
+
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", help="path to gpt-j model")
+    parser.add_argument("--model_path", help="path to llama2-70b model")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument("--golden_quant_format_path", help="path of golden qformat_path")
     parser.add_argument("--golden_quant_param_path", help="path of golden qparam path")
@@ -272,8 +302,8 @@ def perform_generation(
     if type(generator) == MLPerfSubmissionGreedySearch:  # mlperf submission generate
         # load reference generated tokens.
         update_ref_path = ref_path + "/generated_data_list.json"
-        # with open(update_ref_path, "r") as file:
-        #     ref_data = json.load(file)
+        with open(update_ref_path, "r") as file:
+            ref_data = json.load(file)
 
         results = []
         result_flag = True
@@ -347,8 +377,8 @@ def perform_generation(
                     generated_data_list.append(generated_data)
                 print(f"생성 토큰 문장 {idx}: {gen_sentence}")
                 # compare submission model's decoded_test with reference sentences.
-                # ref_sentence = ref_data[idx]["gen_text"]
-                # result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
+                ref_sentence = ref_data[idx]["gen_text"]
+                result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
 
             generation_output_dictionary[idx] = tokenizer.decode(
                 output[0], skip_special_tokens=True
@@ -357,13 +387,11 @@ def perform_generation(
         with open(generation_result_file_path, "w") as f:
             yaml.dump(generation_output_dictionary, f)
 
-        if (
-            type(generator) == MLPerfSubmissionGreedySearch
-        ):  # mlperf submission generate
-            # compare_results_path = res_path + "/qgpt_j_compare_result.json"
-            # with open(compare_results_path, "w") as file:
-            #     json.dump(results, file, indent=4)
-            #     print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
+        if (type(generator) == MLPerfSubmissionGreedySearch):  # mlperf submission generate
+            compare_results_path = res_path + "/llama2-70b_compare_result.json"
+            with open(compare_results_path, "w") as file:
+                json.dump(results, file, indent=4)
+                print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
             if update_gen_list:
                 with open(update_ref_path, "w") as file:
                     json.dump(generated_data_list, file, indent=4)
@@ -385,32 +413,33 @@ def compare_model_outputs(args):
         use_fast=False,
     )
 
-    # golden_model_generator = get_generator_for_golden_model(
-    #     args.model_path,
-    #     args.quant_config_path,
-    #     args.golden_quant_param_path,
-    #     args.golden_quant_format_path,
-    #     args.gpu,
-    #     args.n_layers,
-    #     args.logit_folder_path,
-    #     args.mcp_dumping_on,
-    # )
+    golden_model_generator = get_generator_for_golden_model(
+        args.model_path,
+        args.quant_config_path,
+        args.golden_quant_param_path,
+        args.golden_quant_format_path,
+        args.gpu,
+        args.n_layers,
+        args.logit_folder_path,
+        args.mcp_dumping_on,
+    )
 
-    # golden_generation_result_file_path = (
-    #     args.generation_result_folder_path + "/golden_generation_output.yaml"
-    # )
+    golden_generation_result_file_path = (
+        args.generation_result_folder_path + "/golden_generation_output.yaml"
+    )
 
-    # perform_generation(
-    #     golden_model_generator,
-    #     test_data_list,
-    #     args.logit_folder_path,
-    #     golden_generation_result_file_path,
-    #     tokenizer,
-    # )
+    perform_generation(
+        golden_model_generator,
+        test_data_list,
+        args.logit_folder_path,
+        golden_generation_result_file_path,
+        tokenizer,
+    )
 
-    # del golden_model_generator
-    # gc.collect()
-
+    del golden_model_generator
+    gc.collect()
+    torch.cuda.empty_cache()
+    
     submission_model_generator = get_generator_for_submission_model(
         args.model_path,
         args.quant_config_path,
