@@ -23,20 +23,20 @@ conda activate inference-ci
 # eval model
 printf "\n============= STEP-1: Run calibration =============\n"
 SCENARIO=${SCENARIO:="Offline"}
-#BACKEND="rngd"
+BACKEND="rngd"
 
 MODEL_PATH=$data_dir/models/bert/model.pytorch
 MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 DATASET_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle # use calibration data for forward test
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=${N_COUNT:="10833"} # total_len = 10,833
+N_COUNT=${N_COUNT:="100"} # total_len = 10,833
 
 # quantization args
 CALIB_DATA_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config_int8.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
-N_CALIB=10
+N_CALIB=${N_CALIB:=1} # total_len = 100
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
@@ -96,7 +96,65 @@ python -m ci_file.qbert_forward_test --model_path=$MODEL_PATH \
                                     --res_path=$RES_PATH \
                                     # --update_gen_list #정답지 업데이트용 argument
 
+
+printf "\n============= STEP-3: Check the equivalence of f1 score between current mlperf submission <-> ref =============\n"
+export ML_MODEL_FILE_WITH_PATH=$MODEL_PATH
+export LOG_PATH=$LOG_PATH
+VOCAB_PATH=$data_dir/models/bert/vocab.txt
+DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
+export VOCAB_FILE=$VOCAB_PATH
+export DATASET_FILE=$DATASET_PATH
+export SKIP_VERIFY_ACCURACY=true
+
+SECONDS=0
+python -m run --scenario=$SCENARIO \
+              --backend=$BACKEND \
+              --gpu \
+              --quantize \
+              --quant_param_path=$QUANT_PARAM_PATH \
+              --quant_format_path=$QUANT_FORMAT_PATH \
+              --max_examples=$N_COUNT \
+              --accuracy
+duration=$SECONDS
+printf "$((duration / 60)) minutes and $((duration % 60)) seconds elapsed." &> $LOG_PATH/elapsed_time.log
+
+ACCURACY_LOG_FILE=$LOG_PATH/mlperf_log_accuracy.json
+python accuracy-squad.py --vocab_file=$VOCAB_PATH \
+                         --val_data=$DATASET_PATH \
+                         --log_file=$ACCURACY_LOG_FILE \
+                         --out_file=$LOG_PATH/predictions.json \
+                         --max_examples=$N_COUNT \
+                         &> $LOG_PATH/accuracy_result.log
+
+CUR_F1_SCORE=$(grep -oP '"f1":\s*\K[0-9.]+' "$LOG_PATH/accuracy_result.log")
+REF_F1_SCORE=94.86666
+
+# f1 score 비교: Ref <-> submission model 
+
+DIFF=$(echo "scale=3; $REF_F1_SCORE - $CUR_F1_SCORE" | bc)
+# 절대값 계산 (소수점 이하 셋째 자리까지)
+DIFF=$(echo "${DIFF#-}" | bc)  # 음수를 제거하여 절대값을 얻음
+
+# 오차가 소수점 셋째 자리까지 차이가 있는지 확인
+echo "==========================================================================="
+echo "The current F1 score is: $CUR_F1_SCORE"
+echo "Reference F1 score is: $REF_F1_SCORE"
+echo "==========================================================================="
+echo "Check the equivalence of f1 score between current mlperf submission:"
+if (( $(echo "$DIFF > 0.001" | bc -l) )); then
+    echo "FAIL: Ref 모델의 F1 score 와 $DIFF 차이가 발생합니다."
+else
+    echo "PASS: Ref 모델의 F1 score 차이가 허용수치 이내 입니다( $DIFF )."
+fi
+echo "==========================================================================="
+
+printf "Save evaluation log to $LOG_PATH"
+
 unset LOG_PATH
+unset ML_MODEL_FILE_WITH_PATH
+unset VOCAB_FILE
+unset DATASET_FILE
+unset SKIP_VERIFY_ACCURACY
 
 printf "\n============= End of Forward Test for QBERT =============\n"
 

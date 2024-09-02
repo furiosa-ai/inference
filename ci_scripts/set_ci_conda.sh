@@ -27,3 +27,6 @@ if pip show accelerate > /dev/null 2>&1; then
 fi
 
 printf "\n============= conda set done! =============\n"
+
+# exit from conda env.
+conda deactivate
