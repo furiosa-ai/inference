@@ -29,11 +29,13 @@ SCENARIO=${SCENARIO:="Offline"}
 MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=${N_COUNT:="10"} # total_len=13,368
+# N_COUNT=${N_COUNT:="10"} # total_len=13,368
+N_COUNT=${N_COUNT:="2"} # total_len=13,368 for test
 
 # quantization args
 export CALIBRATE=true
-export N_CALIB=50
+# export N_CALIB=50
+export N_CALIB=5 # for test
 
 CALIB_DATA_PATH=$data_dir/dataset/cnn-daily-mail/calibration/cnn_dailymail_calibration.json
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config_int8.yaml
