@@ -87,7 +87,7 @@ python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
                                                 --gpu \
                                                 --ref_path=$REF_PATH\
                                                 --res_path=$RES_PATH\
-                                                # --update_gen_list #정답지 업데이트용 argument
+                                                --update_gen_list #정답지 업데이트용 argument
 
 
                                             
