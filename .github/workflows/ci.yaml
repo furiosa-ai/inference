@@ -46,8 +46,10 @@ jobs:
           pip list | grep model
 
       - name: Set up PATH for Conda
-        run: echo "/anaconda/condabin" >> $GITHUB_PATH
-
+        run: |
+          echo "/anaconda/condabin" >> $GITHUB_PATH
+          export CONDA_EXE="/anaconda/condabin"
+          
       - name: Verify Conda installation
         run: conda --version
       
