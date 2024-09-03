@@ -102,7 +102,7 @@ jobs:
               } catch (err) {
                 jsonContent += `\n\n**${path.basename(jsonPath)}:**\nFailed to read the file.\n`;
               }
-            );
+            });
 
             const name = 'CI_TEST';
             const url = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
