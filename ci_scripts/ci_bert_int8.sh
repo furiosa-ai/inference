@@ -95,7 +95,7 @@ python -m ci_file.qbert_forward_test --model_path=$MODEL_PATH \
                                     --gpu \
                                     --ref_path=$REF_PATH \
                                     --res_path=$RES_PATH \
-                                    # --update_gen_list #정답지 업데이트용 argument
+                                    --update_gen_list #정답지 업데이트용 argument
 
 
 printf "\n============= STEP-3: Check the equivalence of f1 score between current mlperf submission <-> ref =============\n"
