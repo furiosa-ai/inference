@@ -65,11 +65,11 @@ jobs:
           pwd
           bash ./ci_scripts/ci_bert_int8.sh
 
-      - name: Run gpt-j INT8 CI
-        run: |
-          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
-          pwd
-          bash ./ci_scripts/ci_gpt_j_int8.sh
+      # - name: Run gpt-j INT8 CI
+      #   run: |
+      #     cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
+      #     pwd
+      #     bash ./ci_scripts/ci_gpt_j_int8.sh
 
       # - name: Run llama2-70b INT8 CI
       #   run: |
@@ -97,7 +97,6 @@ jobs:
             const jsonPaths = [
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_compare_result.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_int8_f1_score.json',
-              '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/qgpt_j_compare_result.json',
             ];
 
             let jsonContent = '';
@@ -114,7 +113,6 @@ jobs:
             const name = 'CI_TEST';
             const url = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
             const success = '${{ job.status }}' === 'success';
-            const body = `${url}\n${name}: ${success ? 'succeeded ✅' : 'failed ❌'}`;
             const body = `${url}\n${name}: \n\n### JSON Content:${jsonContent}`;
 
             await github.rest.issues.createComment({
