@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # enter existing conda env.
+export CONDA_EXE="/anaconda/condabin/conda"
 conda_base=$($CONDA_EXE info --base)
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate inference-ci
