@@ -98,7 +98,6 @@ jobs:
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_compare_result.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_int8_f1_score.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/qgpt_j_compare_result.json',
-              # '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/llama2-70b_compare_result.json'
             ];
 
             let jsonContent = '';
