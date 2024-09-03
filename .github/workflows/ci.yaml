@@ -46,7 +46,7 @@ jobs:
           pip list | grep model
 
       - name: Set up PATH for Conda
-        run: export PATH="/anaconda/condabin/conda:$PATH"
+        run: export PATH="/anaconda/condabin:$PATH"
 
       - name: Verify Conda installation
         run: conda --version
