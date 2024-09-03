@@ -12,6 +12,7 @@ jobs:
   CI_TEST:
     if: ${{ contains(github.event.comment.body, '/test') }}
     runs-on: phil
+    
     steps:
       - name: Get PR branch
         uses: kphilpark/pr-issue-info@v1
