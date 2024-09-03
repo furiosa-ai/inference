@@ -48,7 +48,7 @@ jobs:
       - name: Set up PATH for Conda
         run: |
           echo "/anaconda/condabin" >> $GITHUB_PATH
-          echo "/anaconda/condabin/conda" >> $CONDA_EXE
+          export CONDA_EXE="/anaconda/condabin/conda"
           
       - name: Verify Conda installation
         run: conda --version
