@@ -37,8 +37,7 @@ CALIB_DATA_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config_$CONFIG_DTYPE.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
-# N_CALIB=${N_CALIB:=100} # total_len = 100
-N_CALIB=${N_CALIB:=10} # total_len = 100 for test
+N_CALIB=${N_CALIB:=100} # total_len = 100
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"

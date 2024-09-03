@@ -83,17 +83,17 @@ jobs:
           pwd
           bash ./ci_scripts/ci_gpt_j_fp8.sh
 
-      # - name: Run llama2-70b INT8 CI
-      #   run: |
-      #     cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
-      #     pwd
-      #     bash ./ci_scripts/ci_llama2-70b_int8.sh
+      - name: Run llama2-70b INT8 CI
+        run: |
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
+          pwd
+          bash ./ci_scripts/ci_llama2-70b_int8.sh
 
-      # - name: Run llama2-70b FP8 CI
-      #   run: |
-      #     cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
-      #     pwd
-      #     bash ./ci_scripts/ci_llama2-70b_fp8.sh
+      - name: Run llama2-70b FP8 CI
+        run: |
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
+          pwd
+          bash ./ci_scripts/ci_llama2-70b_fp8.sh
 
       - name: Set latest commit status as ${{ job.status }}
         uses: myrotvorets/set-commit-status-action@master
@@ -114,11 +114,13 @@ jobs:
 
             const jsonPaths = [
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_compare_result_int8.json',
-              '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_compare_result_fp8.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_f1_score_int8.json',
+              '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_compare_result_fp8.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/bert_f1_score_fp8.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/qgpt_j_compare_result_int8.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/qgpt_j_compare_result_fp8.json',
+              '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/llama2-70b_compare_result_int8.json',
+              '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/llama2-70b_compare_result_fp8.json'          
             ];
 
             let jsonContent = '';
