@@ -45,6 +45,12 @@ jobs:
           git rev-parse HEAD
           pip list | grep model
 
+      - name: Set up PATH for Conda
+        run: export PATH="/anaconda/condabin/conda:$PATH"
+
+      - name: Verify Conda installation
+        run: conda --version
+      
       - name: Run CI setting
         run: |
           cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
