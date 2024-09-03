@@ -95,8 +95,8 @@ python -m ci_file.qllama2_70b_forward_test  --model_path=$CHECKPOINT_PATH \
                                             --gpu \
                                             --mcp_dumping_on \
                                             --generation_result_folder_path=$OUTPUT_FOLDER_PATH\
-                                            --ref_path REF_PATH\
-                                            --res_path RES_PATH\
+                                            --ref_path=$REF_PATH\
+                                            --res_path=$RES_PATH\
                                             --update_gen_list
 
 
