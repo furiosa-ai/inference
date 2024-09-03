@@ -34,8 +34,10 @@ if [ $DEVICE = "cpu" ];
 fi
 # quantization args
 export CALIBRATE=true
-export N_CALIB=50
-export N_DATA=2
+# export N_CALIB=50
+export N_CALIB=2
+# export N_DATA=2
+export N_DATA=1
 
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config_int8.yaml
