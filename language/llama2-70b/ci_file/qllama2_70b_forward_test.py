@@ -98,6 +98,7 @@ def get_args():
     parser.add_argument("--mcp_dumping_on",action="store_true",help="turn on mcp dumping to compare the equality of logits at each decoding step",)
     parser.add_argument("--ref_path", help="path of reference data")
     parser.add_argument("--res_path", help="path of ci result")
+    parser.add_argument("--config_dtype", help="int8 or fp8")
     parser.add_argument("--update_gen_list", action="store_true", help="wheter to update gen_list")
     args = parser.parse_args()
     return args
@@ -297,11 +298,12 @@ def perform_generation(
     tokenizer,
     ref_path=None,
     res_path=None,
+    config_dtype=None,
     update_gen_list=False,
 ):
     if type(generator) == MLPerfSubmissionGreedySearch:  # mlperf submission generate
         # load reference generated tokens.
-        update_ref_path = ref_path + "/generated_data_list.json"
+        update_ref_path = ref_path + f"/generated_data_list_{config_dtype}.json"
         with open(update_ref_path, "r") as file:
             ref_data = json.load(file)
 
@@ -388,7 +390,7 @@ def perform_generation(
             yaml.dump(generation_output_dictionary, f)
 
         if (type(generator) == MLPerfSubmissionGreedySearch):  # mlperf submission generate
-            compare_results_path = res_path + "/llama2-70b_compare_result.json"
+            compare_results_path = res_path + f"/llama2-70b_compare_result_{config_dtype}.json"
             with open(compare_results_path, "w") as file:
                 json.dump(results, file, indent=4)
                 print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
@@ -462,6 +464,7 @@ def compare_model_outputs(args):
         tokenizer,
         ref_path=args.ref_path,
         res_path=args.res_path,
+        config_dtype=args.config_dtype,
         update_gen_list=args.update_gen_list,
     )
     print("----------------------------------------------")

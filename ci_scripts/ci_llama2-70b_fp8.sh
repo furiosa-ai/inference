@@ -11,7 +11,7 @@ quant_data_dir=$data_dir/quantization/llama2-70b
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 
-CONFIG_DTYPE=int8
+CONFIG_DTYPE=fp8
 # work on model directory
 cd $work_dir
 

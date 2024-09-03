@@ -77,6 +77,7 @@ def get_args():
     parser.add_argument("--logit_folder_path",help="path of the folder in which logit pickle files are to be stored",)
     parser.add_argument("--ref_path", help="path of reference data")
     parser.add_argument("--res_path", help="path of ci result")
+    parser.add_argument("--config_dtype", help="int8 or fp8")
     parser.add_argument("--update_gen_list", action="store_true", help="wheter to update gen_list")
     args = parser.parse_args()
     return args
@@ -136,13 +137,14 @@ def perform_generation_to_check_equality(
     n_data,
     ref_path,
     res_path,
+    config_dtype,
     update_gen_list=False,
 ):
     tokenizer = get_tokenizer()
     with open(dataset_path, "rb") as f:
         val_features = pickle.load(f)
     # # load reference generated tokens.
-    update_ref_path = ref_path + "/generated_data_list.json"
+    update_ref_path = ref_path + f"/generated_data_list_{config_dtype}.json"
     with open(update_ref_path, "r") as file:
         ref_data = json.load(file)
 
@@ -188,7 +190,7 @@ def perform_generation_to_check_equality(
         break # todos
     
             
-    compare_results_path = res_path + "/bert_compare_result.json"
+    compare_results_path = res_path + f"/bert_compare_result_{config_dtype}.json"
     with open(compare_results_path, "w") as file:
         json.dump(results, file, indent=4)
         print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
@@ -230,6 +232,7 @@ def compare_model_outputs(args):
             args.n_data,
             args.ref_path,
             args.res_path,
+            args.config_dtype,
             update_gen_list=args.update_gen_list,
         )
     )

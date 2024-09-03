@@ -95,6 +95,7 @@ def get_args():
     parser.add_argument("--logit_folder_path",help="path of the folder in which logit pickle files are to be stored",)
     parser.add_argument("--ref_path", help="path of reference data")
     parser.add_argument("--res_path", help="path of ci result")
+    parser.add_argument("--config_dtype", help="int8 or fp8")
     parser.add_argument("--update_gen_list", action="store_true", help="wheter to update gen_list")
     args = parser.parse_args()
     return args
@@ -183,13 +184,14 @@ def generate_compare_gen_token(
     n_data,
     ref_path,
     res_path,
+    config_dtype,
     update_gen_list=False,
 ):
     validation_dataset = Dataset(dataset_path, total_count_override=n_data)
     device = golden_model_generator.prefill_model.device
     tokenizer = get_tokenizer()
     # load reference generated tokens.
-    update_ref_path = ref_path + "/generated_data_list.json"
+    update_ref_path = ref_path + f"/generated_data_list_{config_dtype}.json"
     with open(update_ref_path, "r") as file:
         ref_data = json.load(file)
 
@@ -259,7 +261,7 @@ def generate_compare_gen_token(
         ref_sentence = ref_data[idx]["gen_text"]
         result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
 
-    compare_results_path = res_path + "/qgpt_j_compare_result.json"
+    compare_results_path = res_path + f"/qgpt_j_compare_result_{config_dtype}.json"
     with open(compare_results_path, "w") as file:
         json.dump(results, file, indent=4)
         print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
@@ -299,6 +301,7 @@ def compare_model_outputs(args):
         args.n_data,
         args.ref_path,
         args.res_path,
+        args.config_dtype,
         update_gen_list=args.update_gen_list,
     )
     print("----------------------------------------------")
