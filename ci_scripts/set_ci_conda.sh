@@ -1,5 +1,10 @@
 #!/bin/bash
 
+RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
+if [ ! -d "$RES_PATH" ]; then
+  mkdir -p "$RES_PATH"
+  echo "Directory $RES_PATH created."
+
 # enter existing conda env.
 export CONDA_EXE="/anaconda/condabin/conda"
 conda_base=$($CONDA_EXE info --base)
