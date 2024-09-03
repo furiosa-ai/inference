@@ -31,7 +31,7 @@ DATASET_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle # use calib
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=${N_COUNT:="100"} # total_len = 10,833
 
-# quantization args
+# quantization argsㅜ
 CALIB_DATA_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config_int8.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
@@ -148,6 +148,18 @@ else
 fi
 echo "==========================================================================="
 
+current_date=$(date '+%Y-%m-%d %H:%M:%S')
+res_file_path=$RES_PATH/bert_int8_f1_score.json
+cat <<EOF > "$res_file_path"
+{
+    "date": "$current_date",
+    "count": $N_COUNT,
+    "f1_score": $CUR_F1_SCORE,
+    "reference_f1_score": $REF_F1_SCORE,
+}
+EOF
+
+echo "Results saved to $res_file_path"
 printf "Save evaluation log to $LOG_PATH"
 
 unset LOG_PATH
