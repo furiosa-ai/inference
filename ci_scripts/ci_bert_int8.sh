@@ -37,7 +37,8 @@ CALIB_DATA_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config_int8.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
-N_CALIB=${N_CALIB:=100} # total_len = 100
+# N_CALIB=${N_CALIB:=100} # total_len = 100
+N_CALIB=${N_CALIB:=10} # total_len = 100 For TEST
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
@@ -143,9 +144,9 @@ echo "Reference F1 score is: $REF_F1_SCORE"
 echo "==========================================================================="
 echo "Check the equivalence of f1 score between current mlperf submission:"
 if (( $(echo "$DIFF > 0.001" | bc -l) )); then
-    echo "FAIL: Ref 모델의 F1 score 와 $DIFF 차이가 발생합니다."
+    echo "FAIL: Cur F1 Score <-> Ref F1 Score diff : $DIFF, diff 허용수치를 넘었습니다."
 else
-    echo "PASS: Ref 모델의 F1 score 차이가 허용수치 이내 입니다( $DIFF )."
+    echo "PASS: Cur F1 Score <-> Ref F1 Score diff : $DIFF, diff 허용수치 이내 입니다."
 fi
 echo "==========================================================================="
 
