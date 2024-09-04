@@ -19,7 +19,6 @@ def _quantize(
         model,
         qformat_path=qformat_path,
         qparam_path=qparam_path,
-        delete_org_weight=True,
         decode_phase=quantized_prefill is not None,
         quantized_prefill_model=quantized_prefill,
         # https://github.com/furiosa-ai/inference/pull/29/files#diff-9b228ac2c8c424039f8ab41443631c4097f3c3abf73a05b3e327c51ed30d394dR65
