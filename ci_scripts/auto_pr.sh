@@ -2,7 +2,7 @@ name: Auto PR and Comment
 
 on:
   schedule:
-    - cron: "3 5 * * *"  # 매일 오후 2시 3분 실행 (KTC 기준) UTC 5시 3분
+    - cron: "7 5 * * *"  # 매일 오후 2시 3분 실행 (KTC 기준) UTC 5시 3분
     
 jobs:
   create-pr-and-comment:
