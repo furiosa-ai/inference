@@ -185,7 +185,7 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         torch.save(quant_models["decode"].state_dict(), qlv4_decode_out_path)
         # model_compressor.save_graph_patterns(quant_models["prefill"], prefill_rblock_json_out_path)
         # model_compressor.save_graph_patterns(quant_models["decode"], decode_rblock_json_out_path)
-
+        
 
 def get_args():
     parser = argparse.ArgumentParser()
