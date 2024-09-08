@@ -134,7 +134,7 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 
     model_compressor.calibrate(
         model_for_calib,
-        dataloader=calib_dataloader,
+        # dataloader=calib_dataloader,
         autoscale_calib_kwargs=autoscale_calib_cfg if run_autoscale else None,
         model_type=model_type,
         **get_kwargs(model_compressor.calibrate, qconfig),
@@ -160,7 +160,6 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         qparam_path = golden_qparam_path,
         qlevel=2,
         target_machine=qconfig["target_machine"],
-        delete_org_weight=True,
         immigrate_qparams = True,
     )
 
@@ -186,10 +185,7 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         torch.save(quant_models["decode"].state_dict(), qlv4_decode_out_path)
         # model_compressor.save_graph_patterns(quant_models["prefill"], prefill_rblock_json_out_path)
         # model_compressor.save_graph_patterns(quant_models["decode"], decode_rblock_json_out_path)
-
         
-        
-
 
 def get_args():
     parser = argparse.ArgumentParser()

@@ -132,7 +132,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
 
     model_compressor.calibrate(
         model,
-        dataloader=calib_dataloader,
+        # dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
         model_type = model_type,
         autoscale_calib_kwargs=autoscale_calib_kwargs,
@@ -163,7 +163,6 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         qparam_path = golden_qparam_path,
         qlevel=2,
         target_machine=qconfig["target_machine"],
-        delete_org_weight=True,
         immigrate_qparams = True,
     )
 
