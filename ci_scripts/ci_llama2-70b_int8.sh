@@ -96,7 +96,7 @@ python -m ci_file.qllama2_70b_forward_test  --model_path=$CHECKPOINT_PATH \
                                             --ref_path=$REF_PATH\
                                             --res_path=$RES_PATH\
                                             --config_dtype=$CONFIG_DTYPE\
-                                            --update_gen_list
+                                            # --update_gen_list
 
 
 printf "\n============= End of Forward Test for Qllama2-70b =============\n"

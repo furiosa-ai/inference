@@ -134,7 +134,7 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 
     model_compressor.calibrate(
         model_for_calib,
-        dataloader=calib_dataloader,
+        # dataloader=calib_dataloader,
         autoscale_calib_kwargs=autoscale_calib_cfg if run_autoscale else None,
         model_type=model_type,
         **get_kwargs(model_compressor.calibrate, qconfig),

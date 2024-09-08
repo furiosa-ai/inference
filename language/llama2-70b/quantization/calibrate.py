@@ -132,7 +132,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
 
     model_compressor.calibrate(
         model,
-        dataloader=calib_dataloader,
+        # dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
         model_type = model_type,
         autoscale_calib_kwargs=autoscale_calib_kwargs,
