@@ -1,6 +1,0 @@
-outs:
-- md5: f09592fda5709ceb6b8dadad8dd5a579.dir
-  size: 350
-  nfiles: 1
-  hash: md5
-  path: bert

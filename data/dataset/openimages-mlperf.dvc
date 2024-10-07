@@ -1,6 +1,0 @@
-outs:
-- md5: 5773eae84bee1d682122a3ad862bb6ce.dir
-  size: 9847573670
-  nfiles: 25287
-  hash: md5
-  path: openimages-mlperf
