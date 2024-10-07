@@ -20,7 +20,7 @@ from transformers.generation.utils import BeamSearchScorer
 
 from ci_file.utils.check_logit_equality import compare_logits
 from ci_file.utils.compare_output_yaml import compare_output_yaml
-from ci_file.utils.gen_test_data import gen_test_data
+from ci_file.utils.gen_test_data import gen_test_data_llama3
 from ci_file.utils.turn_on_mcp_dumping import turn_on_mcp_dumping
 from dataset import Dataset
 from quantization.calibrate_llama3 import load_pytorch_model
@@ -360,10 +360,7 @@ def perform_generation(
 # load model_script
 def compare_model_outputs(args):
 
-    # test_data_list = gen_test_data(args.dataset_path, args.n_data)
-    test_data_list = []
-    sample_data = torch.load('/home/home-mcl/shared_data/dataset/open-orca/validation/test_data.pt')
-    test_data_list.append(sample_data)
+    test_data_list = gen_test_data_llama3(args.dataset_path, args.n_data)
     
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_path,
