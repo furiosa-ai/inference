@@ -58,11 +58,7 @@ QUANT_CONFIG_PATH="$MODEL_DATA_DIR/quant_config_$CONFIG_DTYPE.yaml"
 
 # DATASET_PATH="$DATA_DIR/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl"
 DATASET_PATH="$DATA_DIR/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama3.sampled_24576.pkl"
-# QUANT_PARAM_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range/quant_param.npy"
-# QUANT_FORMAT_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range/quant_format.yaml"
 
-QUANT_PARAM_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L/quant_param.npy"
-QUANT_FORMAT_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L/quant_format.yaml"
 
 LOGIT_FOLDER_PATH="$WORK_DIR/ci_file/logit_files"
 OUTPUT_FOLDER_PATH="$WORK_DIR/ci_file/output_files"
@@ -71,10 +67,14 @@ mkdir -p "$OUTPUT_FOLDER_PATH"
 
 N_EVAL_DATA="${N_DATA:-1}"          # Number of evaluation data samples (default: 1)
 
+# QUANT_PARAM_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range/quant_param.npy"
+# QUANT_FORMAT_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range/quant_format.yaml"
 if [ "$CONFIG_DTYPE" == "fp8" ]; then
-    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L"
+    QUANT_PARAM_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L/quant_param.npy"
+    QUANT_FORMAT_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8KfV8/3f2L/quant_format.yaml"
 elif [ "$CONFIG_DTYPE" == "int8" ]; then
-    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L"
+    QUANT_PARAM_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L/quant_param.npy"
+    QUANT_FORMAT_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L/quant_format.yaml"
 fi
 
 # work on model directory
