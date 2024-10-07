@@ -49,32 +49,18 @@ WORK_DIR="$GIT_ROOT_DIR/$MODEL_DIR"
 DATA_DIR="/home/home-mcl/shared_data"
 MODEL_DATA_DIR="$DATA_DIR/quant/$MODEL_NAME"
 LOG_DIR="$GIT_ROOT_DIR/logs"
-REF_PATH="$DATA_DIR/quant/llama3-8b/ref"
-RES_PATH="$DATA_DIR/results"
 
 # Model and quantization paths
 MODEL_PATH="$DATA_DIR/models/llama3/Meta-Llama-3.1-8B-Instruct"
 QUANT_CONFIG_PATH="$MODEL_DATA_DIR/quant_config_$CONFIG_DTYPE.yaml"
 
-# DATASET_PATH="$DATA_DIR/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl"
-DATASET_PATH="$DATA_DIR/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama3.sampled_24576.pkl"
-# QUANT_PARAM_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range/quant_param.npy"
-# QUANT_FORMAT_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range/quant_format.yaml"
-
-QUANT_PARAM_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L/quant_param.npy"
-QUANT_FORMAT_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L/quant_format.yaml"
-
-LOGIT_FOLDER_PATH="$WORK_DIR/ci_file/logit_files"
-OUTPUT_FOLDER_PATH="$WORK_DIR/ci_file/output_files"
-mkdir -p "$LOGIT_FOLDER_PATH"
-mkdir -p "$OUTPUT_FOLDER_PATH"
-
-N_EVAL_DATA="${N_DATA:-1}"          # Number of evaluation data samples (default: 1)
-
 if [ "$CONFIG_DTYPE" == "fp8" ]; then
-    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L"
+    # QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L"
+    QUANT_DATA_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range"
+
 elif [ "$CONFIG_DTYPE" == "int8" ]; then
-    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L"
+    # QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L"
+    QUANT_DATA_PATH="test"
 fi
 
 # work on model directory
@@ -96,24 +82,22 @@ printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
 printf "\tCALIBRATE: $CALIBRATE\n"
 
+N_EVAL_DATA="${N_DATA:-1}"          # Number of evaluation data samples (default: 1)
+DATASET_PATH="$DATA_DIR/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama3.sampled_24576.pkl"
+
 export LOG_PATH
 
 printf "\n============= QLV4 Load TEST =============\n"
 
-python -m ci_file.backward_compatibility_test_qllama3_forward_test \
-    --model_path="$MODEL_PATH" \
-    --quant_config_path="$QUANT_CONFIG_PATH" \
-    --submission_quant_param_path="$QUANT_PARAM_PATH" \
-    --submission_quant_format_path="$QUANT_FORMAT_PATH" \
-    --n_data="$N_EVAL_DATA" \
-    --dataset_path="$DATASET_PATH" \
-    --logit_folder_path="$LOGIT_FOLDER_PATH" \
-    --gpu \
-    --generation_result_folder_path="$OUTPUT_FOLDER_PATH" \
-    --ref_path="$REF_PATH" \
-    --res_path="$RES_PATH" \
-    --config_dtype="$CONFIG_DTYPE" \
-    --update_gen_list  # Uncomment if you need to update the reference outputs
+python -m ci_file.qllama3_load_gen_test  --model_path=$MODEL_PATH \
+                                        --dataset_path="$DATASET_PATH" \
+                                        --n_data="$N_EVAL_DATA" \
+                                        --quant_config_path=$QUANT_CONFIG_PATH \
+                                        --quant_data_path=$QUANT_DATA_PATH \
+                                        --config_dtype="$CONFIG_DTYPE" \
+                                        --ref_path="$REF_PATH" \
+                                        --res_path="$RES_PATH" \
+                                        --update_gen_list  # Uncomment if you need to update the reference outputs
 
 printf "\n============= End of Test for llama3.1 =============\n"
 

@@ -17,6 +17,7 @@ from transformers.generation.logits_process import \
     MinNewTokensLengthLogitsProcessor
 from transformers.generation.stopping_criteria import MaxLengthCriteria
 from transformers.generation.utils import BeamSearchScorer
+from quantization.utils import get_kwargs, random_seed, set_optimization
 
 from ci_file.utils.check_logit_equality import compare_logits
 from ci_file.utils.compare_output_yaml import compare_output_yaml
@@ -408,5 +409,7 @@ def compare_model_outputs(args):
 
 if __name__ == "__main__":
     args = get_args()
+    random_seed()
+    set_optimization(False)
     compare_model_outputs(args)
     print("llama3.1 forward ci test is passed")
