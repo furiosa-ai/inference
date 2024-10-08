@@ -41,7 +41,7 @@ echo "사용할 데이터 타입: $CONFIG_DTYPE"
 
 # Define model and configuration parameters
 MODEL_NAME="llama3-70b"
-MODEL_DIR="language/llama2-70b" #TODOS
+MODEL_DIR="language/llama2-70b" #잘못입력한게 아닙니다. quant_config가 llama2, llama3.1 공통으로 공유가 되어서 그렇게됨.
 
 # Define paths
 GIT_ROOT_DIR=$(git rev-parse --show-toplevel)
@@ -51,13 +51,13 @@ MODEL_DATA_DIR="$DATA_DIR/quant/$MODEL_NAME"
 LOG_DIR="$GIT_ROOT_DIR/logs"
 
 # Model and quantization paths
-MODEL_PATH="$DATA_DIR/models/llama3/Meta-Llama-3.1-70B-Instruct"
+MODEL_PATH="/home/home-mcl/sunghyuck/inference/data/models/llama3/Meta-Llama-3.1-70B-Instruct"
 QUANT_CONFIG_PATH="$MODEL_DATA_DIR/quant_config_$CONFIG_DTYPE.yaml"
 
 if [ "$CONFIG_DTYPE" == "fp8" ]; then
-    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-70B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L"
+    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-70B-Instruct/mlperf_submission_slice/W8fA8fKV8f/80L"
 elif [ "$CONFIG_DTYPE" == "int8" ]; then
-    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-70B-Instruct/mlperf_submission_slice/W8A8KV8/32L"
+    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-70B-Instruct/mlperf_submission_slice/W8A8KV8/80L"
 fi
 
 # work on model directory
@@ -85,7 +85,8 @@ printf "\n============= QLV4 Load TEST =============\n"
 
 python -m ci_file.qllama3_load_test  --model_path=$MODEL_PATH \
                                     --quant_config_path=$QUANT_CONFIG_PATH \
-                                    --quant_data_path=$QUANT_DATA_PATH
+                                    --quant_data_path=$QUANT_DATA_PATH \
+                                    --config_dtype=$CONFIG_DTYPE
 
 
 printf "\n============= End of Test for llama3.1 =============\n"

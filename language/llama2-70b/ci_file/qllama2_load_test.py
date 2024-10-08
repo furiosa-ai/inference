@@ -161,4 +161,4 @@ def create_qlv4_model(args):
 if __name__ == "__main__":
     args = get_args()
     create_qlv4_model(args)
-    print("llama-70b qlv4 load test is passed")
+    print(f"llama2 qlv4 {args.config_dtype} load test is passed")

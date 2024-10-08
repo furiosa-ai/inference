@@ -41,7 +41,7 @@ echo "사용할 데이터 타입: $CONFIG_DTYPE"
 
 # Define model and configuration parameters
 MODEL_NAME="llama3-8b"
-MODEL_DIR="language/llama2-70b" #TODOS
+MODEL_DIR="language/llama2-70b" #잘못입력한게 아닙니다. quant_config가 llama2, llama3.1 공통으로 공유가 되어서 그렇게됨.
 
 # Define paths
 GIT_ROOT_DIR=$(git rev-parse --show-toplevel)
@@ -85,7 +85,8 @@ printf "\n============= QLV4 Load TEST =============\n"
 
 python -m ci_file.qllama3_load_test  --model_path=$MODEL_PATH \
                                     --quant_config_path=$QUANT_CONFIG_PATH \
-                                    --quant_data_path=$QUANT_DATA_PATH
+                                    --quant_data_path=$QUANT_DATA_PATH \
+                                    --config_dtype=$CONFIG_DTYPE
 
 
 printf "\n============= End of Test for llama3.1 =============\n"

@@ -318,8 +318,6 @@ def get_qlv4_load_models(
 
 #load model_script
 def create_qlv4_model(args):
-
-
     tokenizer = AutoTokenizer.from_pretrained(
             args.model_path,
             model_max_length=1024,
@@ -369,4 +367,4 @@ def create_qlv4_model(args):
 if __name__ == "__main__":
     args = get_args()
     create_qlv4_model(args)
-    print("llama-70b qlv4 load test is passed")
+    print(f"llama3 qlv4 {args.config_dtype} load test is passed")
