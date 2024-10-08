@@ -5,6 +5,7 @@ import pickle
 
 import joblib
 import model_compressor
+import model_compressor_impl
 import torch
 import yaml
 from torch.utils.data import DataLoader
@@ -146,7 +147,7 @@ def get_generator_for_golden_model(
         "decode_model": quant_golden_models["decode"],
     }
 
-    return model_compressor.helper.QuantCausalLM(
+    return model_compressor_impl.helper.QuantCausalLM(
         quant_golden_models, golden_model_type, golden_input_names, golden_concrete_args
     )
 

@@ -254,33 +254,6 @@ def get_qlv4_load_models(
     device = torch.device("cuda:0")
     model = model.to(device)
     print('load model')
-    # device_map_path = "/home/home-mcl/shared_data/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L/device_map.json"
-    # with open(device_map_path, 'r') as file:
-    #     device_map = json.load(file)
-    
-    # model = LlamaForCausalLM.from_pretrained(
-    #     model_path,
-    #     device_map="auto",
-    #     low_cpu_mem_usage=True,
-    #     torch_dtype=torch.float32,
-    #     config=custom_config,
-    # )
-
-    # if hasattr(model, 'hf_device_map'):
-    #     model.device_map = model.hf_device_map
-    #     model.module_name =  model.__class__.__module__ + "." + model.__class__.__name__
-
-    # # Needs to place paged attention key value blocks on the same device as the transformer layers
-    # if hasattr(model, "hf_device_map"):
-    #     TRANSFORMER_LAYER_MODULE = "model.layers"  # valid only for LlamaForCausalLM
-    #     device_map = {
-    #         k.split(TRANSFORMER_LAYER_MODULE + ".")[1]: v
-    #         for k, v in model.hf_device_map.items()
-    #         if TRANSFORMER_LAYER_MODULE in k
-    #     }
-    # else:
-    #     device_map = None
-        
 
     model_type = type(model)
     traced_model = model.trace_all()
@@ -308,24 +281,7 @@ def get_qlv4_load_models(
         disable_auto_node_mapping=True,
     )
 
-    print('1')
     map_location = torch.device('cuda')
-    
-    # model_compressor.load(
-    #     test_prefill_quantized_model, prefill_exported_model_out_path, map_location=map_location
-    # )
-    # model_compressor.load(
-    #     test_decode_quantized_model, decode_exported_model_out_path, map_location=map_location
-    # )
-    # test_prefill_quantized_model = test_prefill_quantized_model.to(DEVICE)
-    # test_decode_quantized_model = test_decode_quantized_model.to(DEVICE)
-
-    # model_compressor.load(
-    #     test_prefill_quantized_model, prefill_exported_model_out_path, enable_multi_gpu=True
-    # )
-    # model_compressor.load(
-    #     test_decode_quantized_model, decode_exported_model_out_path, enable_multi_gpu=True
-    # )
 
     model_compressor.load(
         test_prefill_quantized_model, prefill_exported_model_out_path, map_location=map_location
@@ -334,16 +290,6 @@ def get_qlv4_load_models(
         test_decode_quantized_model, decode_exported_model_out_path, map_location=map_location
     )    
 
-    # model_compressor.load(
-    #     test_prefill_quantized_model, prefill_exported_model_out_path,
-    # )
-    # model_compressor.load(
-    #     test_decode_quantized_model, decode_exported_model_out_path,
-    # )
-    
-    # device_map = test_prefill_quantized_model.device_map
-
-    # return model_type, test_prefill_quantized_model, test_decode_quantized_model, device_map
     return model_type, test_prefill_quantized_model, test_decode_quantized_model
 
 
@@ -371,7 +317,6 @@ def create_qlv4_model(args):
     prefill_state_dict_path = os.path.join(args.quant_data_path, 'prefill.bin')
     decode_state_dict_path = os.path.join(args.quant_data_path, 'decode.bin')
     
-    # model_type, prefill_quantized_model, decode_quantized_model, device_map = get_qlv4_load_models(
     model_type, prefill_quantized_model, decode_quantized_model = get_qlv4_load_models(
         args.model_path, 
         args.quant_data_path, 
@@ -386,10 +331,6 @@ def create_qlv4_model(args):
     submission_model_generator = MLPerfSubmissionGreedySearch(
         model=quant_submission_model
     )
-        
-    # submission_model_generator = MLPerfSubmissionGreedySearch(
-    #     model=quant_submission_model, device_map=device_map
-    # )
 
     result_flag = perform_generation(
         submission_model_generator,

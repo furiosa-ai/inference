@@ -1,15 +1,12 @@
 import argparse
 import json
 import pickle
-
 import torch
 import yaml
 from torch.fx import GraphModule
 from torch.utils.data import DataLoader
 from transformers import BertConfig, BertForQuestionAnswering
-
 import model_compressor  # isort:skip
-
 from .utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
 PADDING_SIZE = 384
@@ -24,8 +21,8 @@ def load_pytorch_model(model_path, model_config_path, use_gpu, n_layers=-1):
     config = BertConfig(**config_json)
     if n_layers != -1:
         config.num_hidden_layers = n_layers
+    
     device = torch.device("cuda:0") if use_gpu else torch.device("cpu")
-
     model = BertForQuestionAnswering(config)
     model.to(device)
     model.eval()

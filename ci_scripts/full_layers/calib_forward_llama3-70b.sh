@@ -41,16 +41,18 @@ echo "사용할 데이터 타입: $CONFIG_DTYPE"
 
 # Define model and configuration parameters
 MODEL_NAME="llama3.1-70b"
-MODEL_DIR="language/llama2-70b" #TODOS
+MODEL_DIR="language/llama2-70b"  #잘못입력한게 아닙니다. quant_config가 llama2, llama3.1 공통으로 공유가 되어서 그렇게됨.
 
 # Define paths
 GIT_ROOT_DIR=$(git rev-parse --show-toplevel)
 WORK_DIR="$GIT_ROOT_DIR/$MODEL_DIR"
 DATA_DIR="/home/home-mcl/shared_data/"
 REF_PATH="$DATA_DIR/quant/llama3-70b/ref"
-RES_PATH="$DATA_DIR/results"
 LOG_DIR="$GIT_ROOT_DIR/logs"
+RES_PATH="$LOG_DIR/results"
 QUANT_DATA_DIR="$DATA_DIR/quant/llama3-70b"
+
+mkdir -p $RES_PATH
 
 # Model and dataset paths
 CHECKPOINT_PATH=/home/home-mcl/sunghyuck/inference/data/models/llama3/Meta-Llama-3.1-70B-Instruct #TMP 나중에 경로정리할거임

@@ -55,12 +55,10 @@ MODEL_PATH="$DATA_DIR/models/llama3/Meta-Llama-3.1-8B-Instruct"
 QUANT_CONFIG_PATH="$MODEL_DATA_DIR/quant_config_$CONFIG_DTYPE.yaml"
 
 if [ "$CONFIG_DTYPE" == "fp8" ]; then
-    # QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L"
-    QUANT_DATA_PATH="/home/home-mcl/phil/actions-runner/_work/inference/inference/logs/llama3.1-8b/Offline/W8fA8fKV8f/20241007_101735UTC/calibration_range"
+    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8fA8fKV8f/32L"
 
 elif [ "$CONFIG_DTYPE" == "int8" ]; then
-    # QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L"
-    QUANT_DATA_PATH="test"
+    QUANT_DATA_PATH="$DATA_DIR/furiosa_llm_models_artifacts/quantized/meta-llama/Meta-Llama-3.1-8B-Instruct/mlperf_submission_slice/W8A8KV8/32L"
 fi
 
 # work on model directory

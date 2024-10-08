@@ -85,7 +85,8 @@ echo -e "\n============= STEP 2: Run Load Test ============="
 python -m ci_file.qllama2_load_test \
     --model_path="$MODEL_PATH" \
     --quant_config_path="$QUANT_CONFIG_PATH" \
-    --quant_data_path="$QUANT_DATA_PATH"
+    --quant_data_path="$QUANT_DATA_PATH" \
+    --config_dtype=$CONFIG_DTYPE
 
 echo -e "\n============= End of Load Test for LLaMA2-70B ============="
 
