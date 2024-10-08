@@ -47,8 +47,6 @@ MODEL_DIR="language/llama2-70b"
 GIT_ROOT_DIR=$(git rev-parse --show-toplevel)
 WORK_DIR="$GIT_ROOT_DIR/$MODEL_DIR"
 DATA_DIR="/home/home-mcl/shared_data/"
-REF_PATH="$DATA_DIR/quant/llama2-70b/ref"
-RES_PATH="$DATA_DIR/results"
 QUANT_DATA_DIR="$DATA_DIR/quant/llama2-70b"
 LOG_DIR="$GIT_ROOT_DIR/logs"
 
