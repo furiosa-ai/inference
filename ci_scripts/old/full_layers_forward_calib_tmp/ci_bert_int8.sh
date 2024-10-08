@@ -11,7 +11,7 @@ RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/r
 quant_data_dir=$data_dir/quantization/bert
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
-CONFIG_DTYPE=fp8
+CONFIG_DTYPE=int8
 # work on model directory
 cd $work_dir
 
@@ -129,7 +129,7 @@ python accuracy-squad.py --vocab_file=$VOCAB_PATH \
                          &> $LOG_PATH/accuracy_result_$CONFIG_DTYPE.log
 
 CUR_F1_SCORE=$(grep -oP '"f1":\s*\K[0-9.]+' "$LOG_PATH/accuracy_result_$CONFIG_DTYPE.log")
-REF_F1_SCORE=95.46667
+REF_F1_SCORE=94.86666 #int8
 
 # f1 score 비교: Ref <-> submission model 
 

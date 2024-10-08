@@ -8,10 +8,10 @@ work_dir=$git_dir/$model_dir
 data_dir=/home/home-mcl/phil/actions-runner/_work/data
 REF_PATH=/home/home-mcl/phil/actions-runner/_work/data/quantization/bert/ref
 RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
-quant_data_dir=$data_dir/quantization/bert
+
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
-CONFIG_DTYPE=int8
+CONFIG_DTYPE=fp8
 # work on model directory
 cd $work_dir
 
@@ -21,8 +21,6 @@ conda_base=$($CONDA_EXE info --base)
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate inference-ci
 
-# eval model
-printf "\n============= STEP-1: Run calibration =============\n"
 SCENARIO=${SCENARIO:="Offline"}
 BACKEND="rngd"
 
@@ -32,61 +30,37 @@ DATASET_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle # use calib
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=${N_COUNT:="100"} # total_len = 10,833
 
-# quantization argsㅜ
-CALIB_DATA_PATH=$data_dir/dataset/squad/calibration/cal_features.pickle
-QUANT_CONFIG_PATH=$quant_data_dir/quant_config_$CONFIG_DTYPE.yaml
-QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
-QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
-N_CALIB=${N_CALIB:=100} # total_len = 100
+# eval model
+printf "\n============= STEP-1: pull dvc =============\n"
+MODEL_DATA_DIR=$data_dir/furiosa_llm_models_artifacts/quantized/furiosa-ai/mlperf-bert-large/mlperf_submission/W8fA8f/24L
 
-printf "<<EVAL_CONFIG>>\n"
-printf "\tSCENARIO: $SCENARIO\n"
-printf "\tNUM_EVAL_DATA: $N_COUNT\n"
-printf "\tCALIBRATE: $CALIBRATE\n"
+# TAG=main
+# cd $git_dir
+# git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+# cd $git_dir/furiosa-llm-models-artifacts
+# git checkout $TAG
 
-export LOG_PATH
+# quant_data_dvc_dir=/quantized/furiosa-ai/mlperf-bert-large/mlperf_submission/W8fA8f/24L/
+# dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
+# dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
 
-mkdir -p $LOG_PATH/calibration_range
+# cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $MODEL_DATA_DIR/quant_param.npy
 
-printf "\tNUM_CALIB_DATA: $N_CALIB\n"
-GOLDEN_QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param_golden.npy
-GOLDEN_QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format_golden.yaml
-python -m quantization.calibrate --model_type="golden" \
-                                    --model_path=$MODEL_PATH \
-                                    --model_config_path=$MODEL_CONFIG_PATH \
-                                    --quant_config_path=$QUANT_CONFIG_PATH \
-                                    --quant_param_path=$GOLDEN_QUANT_PARAM_PATH \
-                                    --quant_format_path=$GOLDEN_QUANT_FORMAT_PATH \
-                                    --calib_data_path=$CALIB_DATA_PATH \
-                                    --n_calib=$N_CALIB \
-                                    --gpu
-printf "Save golden calibration files to $GOLDEN_QUANT_PARAM_PATH and $GOLDEN_QUANT_FORMAT_PATH"
+# rm -rf $git_dir/furiosa-llm-models-artifacts
 
-QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
-QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
-python -m quantization.calibrate --model_type="mlperf-submission" \
-                                    --model_path=$MODEL_PATH \
-                                    --model_config_path=$MODEL_CONFIG_PATH \
-                                    --quant_config_path=$QUANT_CONFIG_PATH \
-                                    --quant_param_path=$QUANT_PARAM_PATH \
-                                    --quant_format_path=$QUANT_FORMAT_PATH \
-                                    --calib_data_path=$CALIB_DATA_PATH \
-                                    --n_calib=$N_CALIB \
-                                    --gpu \
-                                    --is_equivalence_ci
-printf "Save submission calibration files to $QUANT_PARAM_PATH and $QUANT_FORMAT_PATH"
+QUANT_FORMAT_PATH=$MODEL_DATA_DIR/quant_format.yaml
+QUANT_PARAM_PATH=$MODEL_DATA_DIR/quant_param.npy
 
 N_DATA=1
 LOGIT_FOLDER_PATH=$work_dir/ci_file/logit_files
 mkdir -p $LOGIT_FOLDER_PATH
 
-printf "\n============= STEP-2: Check the equivalence of logits obtained at each generation step =============\n"
-
-python -m ci_file.qbert_forward_test --model_path=$MODEL_PATH \
+printf "\n============= STEP-2: Check the equivalence of generated tokens (현재 MCP에서 과거 qparam, qformat 작동 유무 확인 + 토큰 동치) =============\n"
+cd $work_dir
+python -m ci_file.backward_compatibility_test_qbert_forward \
+                                    --model_path=$MODEL_PATH \
                                     --model_config_path=$MODEL_CONFIG_PATH \
                                     --quant_config_path=$QUANT_CONFIG_PATH \
-                                    --golden_quant_param_path=$GOLDEN_QUANT_PARAM_PATH \
-                                    --golden_quant_format_path=$GOLDEN_QUANT_FORMAT_PATH \
                                     --submission_quant_format_path=$QUANT_FORMAT_PATH \
                                     --submission_quant_param_path=$QUANT_PARAM_PATH \
                                     --n_data=$N_DATA \
@@ -95,8 +69,8 @@ python -m ci_file.qbert_forward_test --model_path=$MODEL_PATH \
                                     --gpu \
                                     --ref_path=$REF_PATH \
                                     --res_path=$RES_PATH \
-                                    --config_dtype=$CONFIG_DTYPE\
-                                    --update_gen_list #정답지 업데이트용 argument
+                                    --config_dtype=$CONFIG_DTYPE
+# cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $MODEL_DATA_DIR/quant_format.yaml
 
 
 printf "\n============= STEP-3: Check the equivalence of f1 score between current mlperf submission <-> ref =============\n"
@@ -104,7 +78,6 @@ export ML_MODEL_FILE_WITH_PATH=$MODEL_PATH
 export LOG_PATH=$LOG_PATH
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
-export VOCAB_FILE=$VOCAB_PATH
 export DATASET_FILE=$DATASET_PATH
 export SKIP_VERIFY_ACCURACY=true
 
@@ -129,7 +102,7 @@ python accuracy-squad.py --vocab_file=$VOCAB_PATH \
                          &> $LOG_PATH/accuracy_result_$CONFIG_DTYPE.log
 
 CUR_F1_SCORE=$(grep -oP '"f1":\s*\K[0-9.]+' "$LOG_PATH/accuracy_result_$CONFIG_DTYPE.log")
-REF_F1_SCORE=94.86666
+REF_F1_SCORE=95.46667 #fp8
 
 # f1 score 비교: Ref <-> submission model 
 
@@ -166,7 +139,6 @@ printf "Save evaluation log to $LOG_PATH"
 
 unset LOG_PATH
 unset ML_MODEL_FILE_WITH_PATH
-unset VOCAB_FILE
 unset DATASET_FILE
 unset SKIP_VERIFY_ACCURACY
 
@@ -177,3 +149,4 @@ conda deactivate
 
 # get back to git root
 cd $git_dir
+

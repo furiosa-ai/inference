@@ -34,14 +34,15 @@ def get_autoscale_calib_config(model_script, model, calib_dataloader):
     return autoscale_calib_cfg
 
 
-def load_pytorch_model(model_path, use_gpu):
+def load_pytorch_model(model_path, use_gpu, n_layers=-1):
     from furiosa_llm_models.gptj.symbolic.huggingface_rope_rngd_gelu import GPTJForCausalLM
 
     CONFIG_PATH = os.path.join(model_path, "config.json")
     with open(CONFIG_PATH, "r") as f:
         config_dict = json.load(f)
     custom_config = GPTJConfig.from_dict(config_dict)
-    # custom_config.num_hidden_layers = NUM_HIDDEN_LAYERS
+    if n_layers != -1:
+        custom_config.n_layer = n_layers
     
     model = GPTJForCausalLM.from_pretrained(
         model_path,
@@ -61,14 +62,15 @@ def load_pytorch_model(model_path, use_gpu):
     model = model.to(memory_format=torch.channels_last)
     return model
 
-def load_mlperf_submission_model(model_path, use_gpu):
+def load_mlperf_submission_model(model_path, use_gpu, n_layers=-1):
     from backend_RNGD import GPTJForCausalLM
 
     CONFIG_PATH = os.path.join(model_path, "config.json")
     with open(CONFIG_PATH, "r") as f:
         config_dict = json.load(f)
     custom_config = GPTJConfig.from_dict(config_dict)
-    # custom_config.num_hidden_layers = NUM_HIDDEN_LAYERS
+    if n_layers != -1:
+        custom_config.n_layer = n_layers
     
     model = GPTJForCausalLM.from_pretrained(
         model_path,
@@ -134,7 +136,6 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 
     model_compressor.calibrate(
         model_for_calib,
-        dataloader=calib_dataloader,
         autoscale_calib_kwargs=autoscale_calib_cfg if run_autoscale else None,
         model_type=model_type,
         **get_kwargs(model_compressor.calibrate, qconfig),
@@ -160,7 +161,6 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         qparam_path = golden_qparam_path,
         qlevel=2,
         target_machine=qconfig["target_machine"],
-        delete_org_weight=True,
         immigrate_qparams = True,
     )
 
@@ -220,7 +220,12 @@ def get_args():
         default=False,
         help="if true qlv4 state_dict and rblock .json will be saved",
     )
-
+    parser.add_argument(
+        "--n_layers", 
+        type=int, 
+        default=-1,
+        help="the number of layers"
+    )
     args = parser.parse_args()
     return args
 
@@ -228,7 +233,7 @@ def get_args():
 def main():
     args = get_args()
     sut = None
-    golden_model = load_pytorch_model(args.model_path, args.gpu)
+    golden_model = load_pytorch_model(args.model_path, args.gpu, args.n_layers)
 
     random_seed() # todos
     set_optimization(args.torch_numeric_optim)
@@ -244,7 +249,7 @@ def main():
 
     calibrate(golden_model, qconfig, golden_quant_param_path, golden_quant_format_path, dataloader)
     
-    submission_model = load_mlperf_submission_model(args.model_path, args.gpu)
+    submission_model = load_mlperf_submission_model(args.model_path, args.gpu, args.n_layers)
 
     immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig, args.save_cache_files)
 
