@@ -25,13 +25,18 @@ MODEL_PATH=$data_dir/models/bert/model.pytorch
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+MLPERF_CONF=../../mlperf.conf
 N_COUNT=10833 # total_len = 10,833
 
 LOG_PATH=$LOG_PATH \
 ML_MODEL_FILE_WITH_PATH=$MODEL_PATH \
 VOCAB_FILE=$VOCAB_PATH \
 DATASET_FILE=$DATASET_PATH \
-SKIP_VERIFY_ACCURACY=true python run.py --scenario=$SCENARIO --backend=$BACKEND --max_examples=$N_COUNT --accuracy
+SKIP_VERIFY_ACCURACY=true python run.py --scenario=$SCENARIO \
+                                        --backend=$BACKEND \
+                                        --mlperf_conf=$MLPERF_CONF \
+                                        --max_examples=$N_COUNT \
+                                        --accuracy
 python accuracy-squad.py --vocab_file=$VOCAB_PATH --val_data=$DATASET_PATH \
                          --log_file=$LOG_PATH/mlperf_log_accuracy.json --out_file=$LOG_PATH/predictions.json \
                          &> $LOG_PATH/accuracy_result.log

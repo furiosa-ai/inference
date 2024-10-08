@@ -27,6 +27,7 @@ MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+MLPERF_CONF=../../mlperf.conf
 N_COUNT=${N_COUNT:="10833"} # total_len = 10,833
 
 # quantization args
@@ -72,6 +73,7 @@ fi
 SECONDS=0
 python -m run --scenario=$SCENARIO \
               --backend=$BACKEND \
+              --mlperf_conf=$MLPERF_CONF \
               --gpu \
               --quantize \
               --quant_param_path=$QUANT_PARAM_PATH \
