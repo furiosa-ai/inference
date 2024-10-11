@@ -370,8 +370,10 @@ def create_qlv4_model(args):
     
     # test_data_list = make_calib_dataloader(tokenizer)
 
-    qparam_path = os.path.join(args.quant_data_path, 'quant_param.npy')
-    qformat_path = os.path.join(args.quant_data_path, 'quant_format.yaml')
+    # qparam_path = os.path.join(args.quant_data_path, 'quant_param.npy')
+    # qformat_path = os.path.join(args.quant_data_path, 'quant_format.yaml')
+    qparam_path = os.path.join(args.quant_data_path, 'qparam.npy')
+    qformat_path = os.path.join(args.quant_data_path, 'qformat.yaml')
     
     prefill_state_dict_path = os.path.join(args.quant_data_path, 'prefill.bin')
     decode_state_dict_path = os.path.join(args.quant_data_path, 'decode.bin')

@@ -62,6 +62,7 @@ def get_args():
     parser.add_argument("--model_path", help="path to gpt-j model")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument("--quant_data_path", help="path of submission quant data path")
+    parser.add_argument("--config_dtype", help="int8 or fp8")
 
     args = parser.parse_args()
     return args
@@ -142,8 +143,10 @@ def create_qlv4_model(args):
         )
     
 
-    qparam_path = os.path.join(args.quant_data_path, 'quant_param.npy')
-    qformat_path = os.path.join(args.quant_data_path, 'quant_format.yaml')
+    # qparam_path = os.path.join(args.quant_data_path, 'quant_param.npy')
+    # qformat_path = os.path.join(args.quant_data_path, 'quant_format.yaml')
+    qparam_path = os.path.join(args.quant_data_path, 'qparam.npy')
+    qformat_path = os.path.join(args.quant_data_path, 'qformat.yaml')
     
     prefill_state_dict_path = os.path.join(args.quant_data_path, 'prefill.bin')
     decode_state_dict_path = os.path.join(args.quant_data_path, 'decode.bin')
